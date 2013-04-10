@@ -10,6 +10,8 @@
 #include "stdafx.h"
 #include "BSP.h"
 
+#include <assert.h>
+
 BSP* BSP::Create( const void* lpData, size_t cbSize )
 {
 	BSP* bsp = new BSP;
@@ -90,7 +92,12 @@ static void ReadLump( const uint8_t* cursor, std::vector<T>& array, const BSP::L
 	if ( lump.Length > 0 )
 	{
 		array.resize( lump.Length / sizeof( T ) );
-		memcpy( &array[0], &cursor[lump.Offset], lump.Length );
+
+		// The structure can be padded, so don't use Length here
+		memcpy( 
+			&array[0], 
+			&cursor[lump.Offset], 
+			array.size() * sizeof( T ));
 	}
 }
 
@@ -125,19 +132,19 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	ReadLump( lpBytes, Brushes,			lumps[kBrushes] );
 	ReadLump( lpBytes, BrushSides,		lumps[kBrushSides] );
 	ReadLump( lpBytes, Vertices,		lumps[kVertices] );
-	ReadLump( lpBytes, Indices,			lumps[kIndices] );
+/*	ReadLump( lpBytes, Indices,			lumps[kIndices] );
 	ReadLump( lpBytes, Fogs,			lumps[kFogs] );
 	ReadLump( lpBytes, Faces,			lumps[kFaces] );
-	ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
+	//ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
 	ReadLump( lpBytes, LightVolumes,	lumps[kLightVolumes] );
 	// - vis data (done later)
 	
 	// Read the entities info
 	if ( lumps[kEntities].Length )
 	{
-		ReadLump( lpBytes, EntityString, lumps[kEntities] );
+		//ReadLump( lpBytes, EntityString, lumps[kEntities] );
 	}
-	
+
 	// Visibility data.
 	NumClusters = 0;
 	ClusterVisDataSize = 0;
@@ -152,7 +159,7 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	}
 	
 	// Done and DONE.
-	
+	*/
 	return true;
 }
 

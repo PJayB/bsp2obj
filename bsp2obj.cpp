@@ -10,6 +10,8 @@
 
 using namespace std;
 
+#define VERBOSE( x )	
+
 bool ReadWholeFile( const char* file, vector<uint8_t>& data )
 {
 	FILE* f;
@@ -43,11 +45,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	if ( argc < 3 )
 	{
-		cout << "Usage: bsp2obj <input.bsp> <output.obj>" << endl;
+		VERBOSE( cout << "Usage: bsp2obj <input.bsp> <output.obj>" << endl );
 		return 1;
 	}
 
-	cout << "Reading " << argv[1] << " ... ";
+	cout << "BSP2OBJ " << argv[1] << " ... ";
 
 	if ( !ReadWholeFile( argv[1], bspData ) )
 	{
@@ -55,8 +57,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		return 1;
 	}
 
-	cout << "OK! " << bspData.size() << " bytes read." << endl;
-	cout << "Parsing ... ";
+	VERBOSE( cout << "OK! " << bspData.size() << " bytes read." << endl );
+	VERBOSE( cout << "Parsing ... " );
 
 	BSP* bsp = BSP::Create( &bspData[0], bspData.size() );
 	if ( !bsp )
@@ -65,29 +67,26 @@ int _tmain(int argc, _TCHAR* argv[])
 		return 1;
 	}
 
-	cout << "OK! Summary:" << endl;
+	cout << "OK!" << endl;
+	VERBOSE( cout << "Summary:" << endl );
 
-	cout << " * " << bsp->Materials.size() << " Materials" << endl;
-	cout << " * " << bsp->Planes.size() << " Planes" << endl;
-	cout << " * " << bsp->Nodes.size() << " Nodes" << endl;
-	cout << " * " << bsp->Leaves.size() << " Leaves" << endl;
-	cout << " * " << bsp->LeafFaces.size() << " Leaf Faces" << endl;
-	cout << " * " << bsp->LeafBrushes.size() << " Leaf Brushes" << endl;
-	cout << " * " << bsp->Models.size() << " Models" << endl;
-	cout << " * " << bsp->Brushes.size() << " Brushes" << endl;
-	cout << " * " << bsp->BrushSides.size() << " Brush Sides" << endl;
-	cout << " * " << bsp->Vertices.size() << " Vertices" << endl;
-	cout << " * " << bsp->Indices.size() << " Indices" << endl;
-	cout << " * " << bsp->Fogs.size() << " Fogs" << endl;
-	cout << " * " << bsp->Faces.size() << " Faces" << endl;
-	cout << " * " << bsp->LightMaps.size() << " Light Maps" << endl;
-	cout << " * " << bsp->LightVolumes.size() << " Light Volumes" << endl;
-	cout << " * " << bsp->NumClusters << " Clusters" << endl;
-
-
-
-
-
+	VERBOSE( cout << " * " << bsp->Materials.size() << " Materials" << endl );
+	VERBOSE( cout << " * " << bsp->Planes.size() << " Planes" << endl );
+	VERBOSE( cout << " * " << bsp->Nodes.size() << " Nodes" << endl );
+	VERBOSE( cout << " * " << bsp->Leaves.size() << " Leaves" << endl );
+	VERBOSE( cout << " * " << bsp->LeafFaces.size() << " Leaf Faces" << endl );
+	VERBOSE( cout << " * " << bsp->LeafBrushes.size() << " Leaf Brushes" << endl );
+	VERBOSE( cout << " * " << bsp->Models.size() << " Models" << endl );
+	VERBOSE( cout << " * " << bsp->Brushes.size() << " Brushes" << endl );
+	VERBOSE( cout << " * " << bsp->BrushSides.size() << " Brush Sides" << endl );
+	VERBOSE( cout << " * " << bsp->Vertices.size() << " Vertices" << endl );
+	VERBOSE( cout << " * " << bsp->Indices.size() << " Indices" << endl );
+	VERBOSE( cout << " * " << bsp->Fogs.size() << " Fogs" << endl );
+	VERBOSE( cout << " * " << bsp->Faces.size() << " Faces" << endl );
+	VERBOSE( cout << " * " << bsp->LightMaps.size() << " Light Maps" << endl );
+	VERBOSE( cout << " * " << bsp->LightVolumes.size() << " Light Volumes" << endl );
+	VERBOSE( cout << " * " << bsp->NumClusters << " Clusters" << endl );
+	
 	delete bsp;
 
 	return 0;
