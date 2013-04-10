@@ -167,7 +167,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	obj << "# Begin Face Definitions for " << bsp->Faces.size() << " faces." << endl;
 	for ( auto& f : bsp->Faces )
 	{
-		uint16_t* indices = &bsp->Indices[f.StartIndex];
+        if ( f.NumIndices == 0 )
+            continue;
+
+		const uint32_t* indices = &bsp->Indices[f.StartIndex];
 
 		const BSP::Texture& tex = bsp->Materials[f.TextureID];
 		obj << "# Surface " << tex.Name << endl;
@@ -175,9 +178,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		int numFaces = f.NumIndices / 3;
 		for ( int a = 0; a < numFaces; ++a )
 		{
-			size_t i = 1 + f.StartVertexIndex + indices[a + 0];
-			size_t j = 1 + f.StartVertexIndex + indices[a + 1];
-			size_t k = 1 + f.StartVertexIndex + indices[a + 2];
+			size_t i = 1 + f.StartVertexIndex + indices[a * 3 + 0];
+			size_t j = 1 + f.StartVertexIndex + indices[a * 3 + 1];
+			size_t k = 1 + f.StartVertexIndex + indices[a * 3 + 2];
 			obj << "f "	<< i << "/" << i << "/" << i << " "
 						<< j << "/" << j << "/" << j << " "
 						<< k << "/" << k << "/" << k << " "

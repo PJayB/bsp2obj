@@ -39,6 +39,7 @@ public:
 		kLightmaps,         // Stores the lightmaps for the level
 		kLightVolumes,      // Stores extra world lighting information
 		kVisData,           // Stores PVS and cluster info (visibility)
+        kLightArray,        // <TODO>
 		kMaxLumps           // A constant to store the number of lumps	
 	};
 	
@@ -150,6 +151,7 @@ public:
 	{
 		uint32_t				Plane;
 		int32_t					TextureIndex;
+        int32_t                 DrawSurfNum;
 	};
 	
 	struct Fog
@@ -161,8 +163,9 @@ public:
 	
 	struct LightVolume
 	{
-		uint8_t					Ambient[3];
-		uint8_t					Directional[3];
+		uint8_t					Ambient[MAXLIGHTMAPS][3];
+		uint8_t					Directional[MAXLIGHTMAPS][3];
+        uint8_t                 Syles[MAXLIGHTMAPS];
 		uint8_t					Direction[2]; // phi, theta.
 	};
 	
@@ -209,7 +212,7 @@ public:
 	typedef std::vector<Brush>				TBrushList;
 	typedef std::vector<BrushSide>			TBrushSideList;
 	typedef std::vector<Vertex>				TVertexList;
-	typedef std::vector<uint16_t>			TIndexList;
+	typedef std::vector<uint32_t>			TIndexList;
 	typedef std::vector<Fog>				TFogList;
 	typedef std::vector<Face>				TFaceList;
 	typedef std::vector<LightMap>			TLightMapList;

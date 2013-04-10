@@ -1,6 +1,6 @@
 #!/bin/sh
 
-mkdir objs
+mkdir objs 2> /dev/null
 for f in `ls -1 maps/*.bsp`
 do
 	fn=$(basename "$f")
