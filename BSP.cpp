@@ -93,7 +93,8 @@ static void ReadLump( const uint8_t* cursor, std::vector<T>& array, const BSP::L
 	{
 		array.resize( lump.Length / sizeof( T ) );
 
-		// The structure can be padded, so don't use Length here
+		assert( array.size() * sizeof( T ) == lump.Length );
+
 		memcpy( 
 			&array[0], 
 			&cursor[lump.Offset], 
@@ -132,7 +133,7 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	ReadLump( lpBytes, Brushes,			lumps[kBrushes] );
 	ReadLump( lpBytes, BrushSides,		lumps[kBrushSides] );
 	ReadLump( lpBytes, Vertices,		lumps[kVertices] );
-/*	ReadLump( lpBytes, Indices,			lumps[kIndices] );
+	ReadLump( lpBytes, Indices,			lumps[kIndices] );
 	ReadLump( lpBytes, Fogs,			lumps[kFogs] );
 	ReadLump( lpBytes, Faces,			lumps[kFaces] );
 	//ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
@@ -159,7 +160,7 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	}
 	
 	// Done and DONE.
-	*/
+
 	return true;
 }
 

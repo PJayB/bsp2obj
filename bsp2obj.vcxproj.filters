@@ -24,6 +24,9 @@
     <ClInclude Include="BSP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OBJ.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -33,6 +36,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BSP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OBJ.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

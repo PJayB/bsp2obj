@@ -13,6 +13,7 @@
 #include <vector>
 #include <cstdint>
 
+#define MAXLIGHTMAPS 4
 #define BSP_EPSILON 0.03125f
 	
 class BSP
@@ -73,9 +74,9 @@ public:
 	{
 		float					Position[3];
 		float					TexCoord[2];
-		float					LMCoord[2];	// Lightmap coordinate.
+		float					LMCoord[MAXLIGHTMAPS][2];	// Lightmap coordinate.
 		float					Normal[3];
-		uint8_t					Colour[4];
+		uint8_t					Colour[MAXLIGHTMAPS][4];
 	};
 	
 	struct Face
@@ -90,16 +91,17 @@ public:
 		uint32_t				StartIndex;
 		uint32_t				NumIndices;
 
-		uint32_t				LightMapID;
-		uint32_t				LMX; // "The face's lightmap corner in the image"
-		uint32_t				LMY;
+		uint8_t					LightMapStyles[MAXLIGHTMAPS];
+		uint8_t					VertexStyles[MAXLIGHTMAPS];
+
+		uint32_t				LightMapIDs[MAXLIGHTMAPS];
+		uint32_t				LMX[MAXLIGHTMAPS]; // "The face's lightmap corner in the image"
+		uint32_t				LMY[MAXLIGHTMAPS];
 		uint32_t				LMWidth; // Size of the lightmap section
 		uint32_t				LMHeight;
 		
 		float					LMOrigin[3]; // 3D origin of lightmap (???)
-		float					LMVecs[2][3]; // 3D space for s and t unit vectors (???)
-		
-		float					Normal[3];
+		float					LMVecs[3][3]; // 3D space for s and t unit vectors (???)
 		
 		uint32_t				BezierDimensions[2];
 	};
