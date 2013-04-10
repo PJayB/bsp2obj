@@ -59,119 +59,119 @@ public:
 
 	struct Lump
 	{
-		uint32_t				m_Offset;	// Offset into file.
-		uint32_t				m_Length;	// Length of data block.
+		uint32_t				Offset;	// Offset into file.
+		uint32_t				Length;	// Length of data block.
 	};
 	
 	struct Header
 	{
-		uint8_t					m_IBSP[4];
-		int32_t					m_Version;
+		uint8_t					IBSP[4];
+		int32_t					Version;
 	};								
 	
 	struct Vertex
 	{
-		float					m_Position[3];
-		float					m_TexCoord[2];
-		float					m_LMCoord[2];	// Lightmap coordinate.
-		float					m_Normal[3];
-		uint8_t					m_Colour[4];
+		float					Position[3];
+		float					TexCoord[2];
+		float					LMCoord[2];	// Lightmap coordinate.
+		float					Normal[3];
+		uint8_t					Colour[4];
 	};
 	
 	struct Face
 	{
-		int32_t					m_TextureID;
-		int32_t					m_FogID;
-		uint32_t				m_FaceType;
+		int32_t					TextureID;
+		int32_t					FogID;
+		uint32_t				FaceType;
 
-		uint32_t				m_StartVertexIndex;
-		uint32_t				m_NumVertices;
+		uint32_t				StartVertexIndex;
+		uint32_t				NumVertices;
 
-		uint32_t				m_StartIndex;
-		uint32_t				m_NumIndices;
+		uint32_t				StartIndex;
+		uint32_t				NumIndices;
 
-		uint32_t				m_LightMapID;
-		uint32_t				m_LMX; // "The face's lightmap corner in the image"
-		uint32_t				m_LMY;
-		uint32_t				m_LMWidth; // Size of the lightmap section
-		uint32_t				m_LMHeight;
+		uint32_t				LightMapID;
+		uint32_t				LMX; // "The face's lightmap corner in the image"
+		uint32_t				LMY;
+		uint32_t				LMWidth; // Size of the lightmap section
+		uint32_t				LMHeight;
 		
-		float					m_LMOrigin[3]; // 3D origin of lightmap (???)
-		float					m_LMVecs[2][3]; // 3D space for s and t unit vectors (???)
+		float					LMOrigin[3]; // 3D origin of lightmap (???)
+		float					LMVecs[2][3]; // 3D space for s and t unit vectors (???)
 		
-		float					m_Normal[3];
+		float					Normal[3];
 		
-		uint32_t				m_BezierDimensions[2];
+		uint32_t				BezierDimensions[2];
 	};
 	
 	struct Texture
 	{
-		char					m_Name[64];
-		uint32_t				m_Flags; // Apparently unused?
-		uint32_t				m_TextureFlags; // See eTextureFlags
+		char					Name[64];
+		uint32_t				Flags; // Apparently unused?
+		uint32_t				TextureFlags; // See eTextureFlags
 	};
 	
 	struct LightMap
 	{
-		uint8_t					m_Data[128][128][3];
+		uint8_t					Data[128][128][3];
 	};
 	
 	struct Node
 	{
-		uint32_t				m_PlaneIndex;
-		uint32_t				m_FrontIndex; // front node index
-		uint32_t				m_BackIndex;
-		int32_t					m_Mins[3];
-		int32_t					m_Maxs[3];
+		uint32_t				PlaneIndex;
+		uint32_t				FrontIndex; // front node index
+		uint32_t				BackIndex;
+		int32_t					Mins[3];
+		int32_t					Maxs[3];
 	};
 	
 	struct Leaf
 	{
-		uint32_t				m_VisibilityCluster;
-		uint32_t				m_AreaPortal;
-		int32_t					m_Mins[3];
-		int32_t					m_Maxs[3];
-		uint32_t				m_FirstFaceIndex;
-		uint32_t				m_NumLeafFaces;
-		uint32_t				m_FirstBrushIndex;
-		uint32_t				m_NumLeafBrushes;
+		uint32_t				VisibilityCluster;
+		uint32_t				AreaPortal;
+		int32_t					Mins[3];
+		int32_t					Maxs[3];
+		uint32_t				FirstFaceIndex;
+		uint32_t				NumLeafFaces;
+		uint32_t				FirstBrushIndex;
+		uint32_t				NumLeafBrushes;
 	};
 	
 	struct Brush
 	{
-		uint32_t				m_FirstBrushSide;
-		uint32_t				m_NumBrushSides;
-		int32_t					m_TextureIndex;
+		uint32_t				FirstBrushSide;
+		uint32_t				NumBrushSides;
+		int32_t					TextureIndex;
 	};
 	
 	struct BrushSide
 	{
-		uint32_t				m_Plane;
-		int32_t					m_TextureIndex;
+		uint32_t				Plane;
+		int32_t					TextureIndex;
 	};
 	
 	struct Fog
 	{
-		char					m_TextureName[64]; 
-		int32_t					m_BrushIndex;
-		int32_t					m_VisibleSide; // -1 for none
+		char					TextureName[64]; 
+		int32_t					BrushIndex;
+		int32_t					VisibleSide; // -1 for none
 	};
 	
 	struct LightVolume
 	{
-		uint8_t					m_Ambient[3];
-		uint8_t					m_Directional[3];
-		uint8_t					m_Direction[2]; // phi, theta.
+		uint8_t					Ambient[3];
+		uint8_t					Directional[3];
+		uint8_t					Direction[2]; // phi, theta.
 	};
 	
 	struct Model
 	{
-		float					m_Mins[3];
-		float					m_Maxs[3];
-		uint32_t				m_FirstFaceIndex;
-		uint32_t				m_NumFaces;
-		uint32_t				m_FirstBrushIndex;
-		uint32_t				m_NumBrushes;
+		float					Mins[3];
+		float					Maxs[3];
+		uint32_t				FirstFaceIndex;
+		uint32_t				NumFaces;
+		uint32_t				FirstBrushIndex;
+		uint32_t				NumBrushes;
 	};
 
 	struct Plane
@@ -195,6 +195,8 @@ protected:
 	bool				Load( const uint8_t* lpBytes, size_t cbSize );
 	void				Unload();
 	
+public:
+
 	typedef std::vector<Texture>			TMaterialList;
 	typedef std::vector<Plane>				TPlaneList;
 	typedef std::vector<Node>				TNodeList;
@@ -212,27 +214,27 @@ protected:
 	typedef std::vector<LightVolume>		TLightVolumeList;
 	typedef std::vector<uint8_t>			TClusterBitList;
 	
-	TMaterialList		m_Materials;
-	TPlaneList			m_Planes;
-	TNodeList			m_Nodes;
-	TLeafList			m_Leaves;
-	TLeafFaceList		m_LeafFaces;
-	TLeafBrushList		m_LeafBrushes;
-	TModelList			m_Models;
-	TBrushList			m_Brushes;
-	TBrushSideList		m_BrushSides;
-	TVertexList			m_Vertices;
-	TIndexList			m_Indices;
-	TFogList			m_Fogs;
-	TFaceList			m_Faces;
-	TLightMapList		m_LightMaps;
-	TLightVolumeList	m_LightVolumes;
+	TMaterialList		Materials;
+	TPlaneList			Planes;
+	TNodeList			Nodes;
+	TLeafList			Leaves;
+	TLeafFaceList		LeafFaces;
+	TLeafBrushList		LeafBrushes;
+	TModelList			Models;
+	TBrushList			Brushes;
+	TBrushSideList		BrushSides;
+	TVertexList			Vertices;
+	TIndexList			Indices;
+	TFogList			Fogs;
+	TFaceList			Faces;
+	TLightMapList		LightMaps;
+	TLightVolumeList	LightVolumes;
 	
-	std::string			m_EntityString;
+	std::string			EntityString;
 	
-	TClusterBitList		m_ClusterBits;
-	uint32_t			m_NumClusters;
-	uint32_t			m_ClusterVisDataSize;
+	TClusterBitList		ClusterBits;
+	uint32_t			NumClusters;
+	uint32_t			ClusterVisDataSize;
 };
 
 #endif

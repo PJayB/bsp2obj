@@ -87,22 +87,26 @@ float BSP::GetLightMapGamma()
 template<class T>
 static void ReadLump( const uint8_t* cursor, std::vector<T>& array, const BSP::Lump& lump )
 {
-	array.resize( lump.m_Length / sizeof( T ) );
-	memcpy( &array[0], &cursor[lump.m_Offset], lump.m_Length );
+	if ( lump.Length > 0 )
+	{
+		array.resize( lump.Length / sizeof( T ) );
+		memcpy( &array[0], &cursor[lump.Offset], lump.Length );
+	}
 }
 
 static void ReadLump( const uint8_t* cursor, std::string& str, const BSP::Lump& lump )
 {
-	str.resize( lump.m_Length + 1 );
-	memcpy( &str[0], &cursor[lump.m_Offset], lump.m_Length );
+	if ( lump.Length > 0 )
+	{
+		str.resize( lump.Length + 1 );
+		memcpy( &str[0], &cursor[lump.Offset], lump.Length );
+	}
 }
 
 bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 {
 	Unload();
-	
-	std::vector<LightMap> lightMaps;
-	
+		
 	// Read the header
 	const Header* header = (const Header*) lpBytes;
 	
@@ -111,97 +115,68 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	
 	// Read basic lumps
 	// - entities (done later)
-	ReadLump( lpBytes, m_Materials,		lumps[kTextures] );
-	ReadLump( lpBytes, m_Planes,		lumps[kPlanes] );
-	ReadLump( lpBytes, m_Nodes,			lumps[kNodes] );
-	ReadLump( lpBytes, m_Leaves,		lumps[kLeaves] );
-	ReadLump( lpBytes, m_LeafFaces,		lumps[kLeafFaces] );
-	ReadLump( lpBytes, m_LeafBrushes,	lumps[kLeafBrushes] );
-	ReadLump( lpBytes, m_Models,		lumps[kModels] );
-	ReadLump( lpBytes, m_Brushes,		lumps[kBrushes] );
-	ReadLump( lpBytes, m_BrushSides,	lumps[kBrushSides] );
-	ReadLump( lpBytes, m_Vertices,		lumps[kVertices] );
-	ReadLump( lpBytes, m_Indices,		lumps[kIndices] );
-	ReadLump( lpBytes, m_Fogs,			lumps[kFogs] );
-	ReadLump( lpBytes, m_Faces,			lumps[kFaces] );
-	ReadLump( lpBytes, m_LightMaps,		lumps[kLightmaps] );
-	ReadLump( lpBytes, m_LightVolumes,	lumps[kLightVolumes] );
+	ReadLump( lpBytes, Materials,		lumps[kTextures] );
+	ReadLump( lpBytes, Planes,			lumps[kPlanes] );
+	ReadLump( lpBytes, Nodes,			lumps[kNodes] );
+	ReadLump( lpBytes, Leaves,			lumps[kLeaves] );
+	ReadLump( lpBytes, LeafFaces,		lumps[kLeafFaces] );
+	ReadLump( lpBytes, LeafBrushes,		lumps[kLeafBrushes] );
+	ReadLump( lpBytes, Models,			lumps[kModels] );
+	ReadLump( lpBytes, Brushes,			lumps[kBrushes] );
+	ReadLump( lpBytes, BrushSides,		lumps[kBrushSides] );
+	ReadLump( lpBytes, Vertices,		lumps[kVertices] );
+	ReadLump( lpBytes, Indices,			lumps[kIndices] );
+	ReadLump( lpBytes, Fogs,			lumps[kFogs] );
+	ReadLump( lpBytes, Faces,			lumps[kFaces] );
+	ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
+	ReadLump( lpBytes, LightVolumes,	lumps[kLightVolumes] );
 	// - vis data (done later)
 	
 	// Read the entities info
-	if ( lumps[kEntities].m_Length )
+	if ( lumps[kEntities].Length )
 	{
-		ReadLump( lpBytes, m_EntityString, lumps[kEntities] );
+		ReadLump( lpBytes, EntityString, lumps[kEntities] );
 	}
 	
 	// Visibility data.
-	m_NumClusters = 0;
-	m_ClusterVisDataSize = 0;
-	if ( lumps[kVisData].m_Length )
+	NumClusters = 0;
+	ClusterVisDataSize = 0;
+	if ( lumps[kVisData].Length )
 	{
-		const uint32_t* visInfo = (const uint32_t*) (lpBytes + lumps[kVisData].m_Offset);
-		m_NumClusters = visInfo[0];
-		m_ClusterVisDataSize = visInfo[1];
+		const uint32_t* visInfo = (const uint32_t*) (lpBytes + lumps[kVisData].Offset);
+		NumClusters = visInfo[0];
+		ClusterVisDataSize = visInfo[1];
 		
-		m_ClusterBits.resize( m_NumClusters * m_ClusterVisDataSize );
-		memcpy( &m_ClusterBits[0], &visInfo[2], m_NumClusters * m_ClusterVisDataSize );
+		ClusterBits.resize( NumClusters * ClusterVisDataSize );
+		memcpy( &ClusterBits[0], &visInfo[2], NumClusters * ClusterVisDataSize );
 	}
 	
 	// Done and DONE.
-	
-#if 0//def RF_DEBUG
-	for ( uint32_t leafIdx = 0; leafIdx < m_Leaves.size(); ++leafIdx )
-	{
-		const BSP::Leaf* leaf = &m_Leaves[leafIdx];
-
-		// For each face in the leaf
-		for ( uint32_t faceIdx = 0; faceIdx < leaf->m_NumLeafFaces; ++faceIdx )
-		{
-			uint32_t face_index = m_LeafFaces[ leaf->m_FirstFaceIndex + faceIdx ];
-			
-			const BSP::Face& f = m_Faces[ face_index ]; 
-			const BSP::Vertex* firstVertex = &m_Vertices[f.m_StartVertexIndex];
-			const uint16_t* firstIndex = &m_Indices[f.m_StartIndex];
-		
-			for ( uint32_t i = 0; i < f.m_NumIndices; ++i )
-			{
-				const BSP::Vertex& v = firstVertex[ firstIndex[i] ];
-				//v.m_Position[0], v.m_Position[1], v.m_Position[2]
-				RF_ASSERT( v.m_Position[0] >= leaf->m_Mins[0] );
-				RF_ASSERT( v.m_Position[1] >= leaf->m_Mins[1] );
-				RF_ASSERT( v.m_Position[2] >= leaf->m_Mins[2] );
-				RF_ASSERT( v.m_Position[0] <= leaf->m_Maxs[0] );
-				RF_ASSERT( v.m_Position[1] <= leaf->m_Maxs[1] );
-				RF_ASSERT( v.m_Position[2] <= leaf->m_Maxs[2] );
-			}
-		}
-	}
-#endif
 	
 	return true;
 }
 
 void BSP::Unload()
 {
-	m_Materials.clear();
-	m_Planes.clear();
-	m_Nodes.clear();
-	m_Leaves.clear();
-	m_LeafFaces.clear();
-	m_LeafBrushes.clear();
-	m_Models.clear();
-	m_Brushes.clear();
-	m_BrushSides.clear();
-	m_Vertices.clear();
-	m_Indices.clear();
-	m_Fogs.clear();
-	m_Faces.clear();
-	m_LightMaps.clear();
-	m_LightVolumes.clear();
-	m_EntityString.clear();
-	m_ClusterBits.clear();
+	Materials.clear();
+	Planes.clear();
+	Nodes.clear();
+	Leaves.clear();
+	LeafFaces.clear();
+	LeafBrushes.clear();
+	Models.clear();
+	Brushes.clear();
+	BrushSides.clear();
+	Vertices.clear();
+	Indices.clear();
+	Fogs.clear();
+	Faces.clear();
+	LightMaps.clear();
+	LightVolumes.clear();
+	EntityString.clear();
+	ClusterBits.clear();
 	
-	m_NumClusters = 0;
-	m_ClusterVisDataSize = 0;
+	NumClusters = 0;
+	ClusterVisDataSize = 0;
 }
 
