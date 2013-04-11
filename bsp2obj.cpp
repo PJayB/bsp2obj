@@ -3,6 +3,9 @@
 
 #include "stdafx.h"
 #include "BSP.h"
+#include "VFS/VFS.h"
+
+#include <direct.h> // TODO remove me
 
 #include <vector>
 #include <iostream>
@@ -203,8 +206,71 @@ bool DumpMtl( const char* filename, const BSP* bsp )
     return true;
 }
 
+void MountPakFiles()
+{
+	// Enumerate the pak files
+	VFS::FileListing files;
+	VFS::FileListing pakFiles;
+
+	VFS::EnumerateFiles( 
+		"/",
+		files, 
+		true );
+	for ( auto& f : files )
+	{
+		if ( f.find(".pk3") != std::string::npos )
+		{
+			pakFiles.insert(f);
+		}
+	}
+
+	for ( auto& f : pakFiles )
+	{
+		cout << "Mounting " << f << endl;
+
+		VFS::AddZip( f.c_str(), true );
+	}
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
+	if ( argc < 2 )
+		VFS::SetRootDirectory( _getcwd( NULL, 0 ) );
+	else
+		VFS::SetRootDirectory( argv[1] );
+
+	MountPakFiles();
+
+	VFS::FileListing gameFiles;
+	VFS::FileListing bspFiles;
+	VFS::EnumerateFiles(
+		"/",
+		gameFiles );
+	for ( auto& f : gameFiles )
+	{
+		if ( f.find(".bsp") != std::string::npos )
+			bspFiles.insert( f );
+	}
+
+	cout << "Found " << bspFiles.size() << " BSP files in " << gameFiles.size() << " game files." << endl;
+
+	return 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	vector<uint8_t> bspData;
 
 	if ( argc < 3 )

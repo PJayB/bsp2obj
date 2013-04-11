@@ -90,6 +90,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="VFS\VFS.vcxproj">
+      <Project>{d0f88bbc-af0e-47e3-93a1-b0b99eb57bc8}</Project>
+    </ProjectReference>
+    <ProjectReference Include="zlib\zlib.vcxproj">
+      <Project>{ea17a9a2-3380-4791-b556-9710a681ceb0}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

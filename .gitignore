@@ -7,3 +7,5 @@ ipch
 *.opensdf
 *.suo
 objs
+DebugLib
+base
