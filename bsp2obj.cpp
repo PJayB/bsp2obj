@@ -399,11 +399,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	size_t textureIndex = 0;
 	for (auto& t : texturesToExport)
 	{
-		string dest = Rebase(basePath, outputPath, t);
-		ExportTexture(t.c_str(), dest.c_str());
-
 		size_t percent = (textureIndex * 100 / texturesToExport.size());
 		cout << percent << "%: " << t << "\r";
+
+		string dest = Rebase(basePath, outputPath, t);
+		ExportTexture(t.c_str(), dest.c_str());
 	}
 
 	cout << "Export complete." << endl;
