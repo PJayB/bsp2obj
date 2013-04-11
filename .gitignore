@@ -9,3 +9,6 @@ ipch
 objs
 DebugLib
 base
+output
+subset
+output

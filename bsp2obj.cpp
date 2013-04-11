@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "BSP.h"
 #include "VFS/VFS.h"
+#include "VFS/FileUtils.h"
 
 #include <direct.h> // TODO remove me
 
@@ -11,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <map>
 
 #include <assert.h>
 
@@ -18,34 +20,11 @@ using namespace std;
 
 #define VERBOSE( x )	
 
-bool ReadWholeFile( const char* file, vector<uint8_t>& data )
-{
-	FILE* f;
-	fopen_s( &f, file, "rb" );
-	if ( !f )
-		return false;
 
-	fseek( f, 0, SEEK_END );
-	data.resize( ftell( f ) );
-	fseek( f, 0, SEEK_SET );
+typedef std::map<std::string, std::string> StringMap;
 
-	size_t totalRead = 0;
-	while ( !feof( f ) && totalRead < data.size() )
-	{
-		size_t r = fread( &data[totalRead], 1, data.size() - totalRead, f );
-		if ( !r )
-			break;
-		totalRead += r;
-	}
 
-	fclose(f);
-
-	data.resize( totalRead );
-
-	return true;
-}
-
-std::string SafeF( float f )
+string SafeF( float f )
 {
 	char tmp[128];
 	sprintf_s(
@@ -54,14 +33,14 @@ std::string SafeF( float f )
 	return tmp;
 }
 
-std::string SafeMaterial( std::string mtl )
+string SafeMaterial( string mtl )
 {
     for ( size_t i = 0; i < mtl.size(); ++i )
     {
         if ( mtl[i] == '/' )
             mtl[i] = '_';
     }
-    return std::move( mtl );
+    return move( mtl );
 }
 
 const int SF_NODRAW = 0x00200000;
@@ -75,7 +54,6 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
 	if ( !obj.is_open() )
 	{
 		cout << "FAILED to write!" << endl;
-		delete bsp;
 		return false;
 	}
 
@@ -87,9 +65,9 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
 	obj << "# dedicated support email: bsp2obj@gibbering.net" << endl;
 	obj << endl;
 
-    std::string localMtlFN = mtlFilename;
-    std::string::size_type slashPos = localMtlFN.find('/');
-    if ( slashPos != std::string::npos )
+    string localMtlFN = mtlFilename;
+    string::size_type slashPos = localMtlFN.find('/');
+    if ( slashPos != string::npos )
     {
         localMtlFN = localMtlFN.substr(slashPos + 1);
     }
@@ -167,14 +145,13 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
     return true;
 }
 
-bool DumpMtl( const char* filename, const BSP* bsp )
+bool DumpMtl( const char* filename, const BSP* bsp, const StringMap& textureRemap )
 {
 	ofstream mtl;
 	mtl.open( filename );
 	if ( !mtl.is_open() )
 	{
 		cout << "FAILED to open material file: " << filename << endl;
-		delete bsp;
 		return false;
 	}
 
@@ -197,7 +174,13 @@ bool DumpMtl( const char* filename, const BSP* bsp )
         mtl << "Kd 1 1 1" << endl;
         mtl << "Ks 0 0 0" << endl;
         mtl << "Ns 10" << endl;
-        mtl << "map_Kd " << tex.Name << endl;
+
+		StringMap::const_iterator m = textureRemap.find(tex.Name);
+		if ( m != end(textureRemap) )
+			mtl << "map_Kd " << m->second << endl;
+		else
+			mtl << "map_Kd " << tex.Name << endl;
+
         mtl << endl;
     }
 
@@ -206,85 +189,44 @@ bool DumpMtl( const char* filename, const BSP* bsp )
     return true;
 }
 
-void MountPakFiles()
+void RemapTextures( const BSP* bsp, StringMap& remapping )
 {
-	// Enumerate the pak files
-	VFS::FileListing files;
-	VFS::FileListing pakFiles;
+	StringMap textures;
 
-	VFS::EnumerateFiles( 
-		"/",
-		files, 
-		true );
-	for ( auto& f : files )
+	for (auto& t : bsp->Materials)
 	{
-		if ( f.find(".pk3") != std::string::npos )
-		{
-			pakFiles.insert(f);
-		}
+		string name = VFS::MakeFullyQualifiedFileName( t.Name );
+		textures[name] = t.Name;
 	}
 
-	for ( auto& f : pakFiles )
-	{
-		cout << "Mounting " << f << endl;
+	VERBOSE( cout << "Found " << textures.size() << " unique materials to process." << endl ); 
 
-		VFS::AddZip( f.c_str(), true );
-	}
-}
-
-int _tmain(int argc, _TCHAR* argv[])
-{
-	if ( argc < 2 )
-		VFS::SetRootDirectory( _getcwd( NULL, 0 ) );
-	else
-		VFS::SetRootDirectory( argv[1] );
-
-	MountPakFiles();
-
-	VFS::FileListing gameFiles;
-	VFS::FileListing bspFiles;
 	VFS::EnumerateFiles(
 		"/",
-		gameFiles );
-	for ( auto& f : gameFiles )
-	{
-		if ( f.find(".bsp") != std::string::npos )
-			bspFiles.insert( f );
-	}
+		[&] (const char* f) 
+		{
+			// remove the extension
+			std::string base = VFS::ReplaceExtension(f, "");
+			
+			StringMap::const_iterator i = textures.find(base);
+			if ( i != end(textures) )
+			{
+				// We found a matching texture! Remap it
+				remapping[i->second] = f;
+			}
+		});
+}
 
-	cout << "Found " << bspFiles.size() << " BSP files in " << gameFiles.size() << " game files." << endl;
-
-	return 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& texturesToExport )
+{
 	vector<uint8_t> bspData;
 
-	if ( argc < 3 )
-	{
-		VERBOSE( cout << "Usage: bsp2obj <input.bsp> <output.obj>" << endl );
-		return 1;
-	}
+	cout << "Converting " << bspFile << " ... ";
 
-	cout << "BSP2OBJ " << argv[1] << " ... ";
-
-	if ( !ReadWholeFile( argv[1], bspData ) )
+	if ( !VFS::ReadWholeBinaryFile( bspFile, bspData ) )
 	{
 		cout << "FAILED" << endl; 
-		return 1;
+		return false;
 	}
 
 	VERBOSE( cout << "OK! " << bspData.size() << " bytes read." << endl );
@@ -294,7 +236,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if ( !bsp )
 	{
 		cout << "FAILED" << endl;
-		return 1;
+		return false;
 	}
 
 	VERBOSE( cout << "OK!" << endl );
@@ -317,17 +259,27 @@ int _tmain(int argc, _TCHAR* argv[])
 	VERBOSE( cout << " * " << bsp->LightVolumes.size() << " Light Volumes" << endl );
 	VERBOSE( cout << " * " << bsp->NumClusters << " Clusters" << endl );
 
-	VERBOSE( cout << "Saving to " << argv[2] < " ... " );
+	VERBOSE( cout << "Saving to " << objFile < " ... " );
+
+	// Make sure the output directory is present
+	VFS::MakeNestedDirectories( VFS::BasePath( objFile ).c_str() );
+
+	// Collect textures and find their real identities
+	StringMap textureRemap;
+	RemapTextures( bsp, textureRemap );
+
+	for (auto& i : textureRemap)
+	{
+		texturesToExport.insert(i.second);
+	}
 
 	// Open the material definition file
-	std::string mtlFile = argv[2];
-	mtlFile = mtlFile.substr( 0, mtlFile.find_last_of('.') );
-	mtlFile += ".mtl";
+	string mtlFile = VFS::ReplaceExtension( objFile, ".mtl" );
 
     int result = 1;
-    if ( DumpObj( argv[2], mtlFile.c_str(), bsp ) )
+    if ( DumpObj( objFile, mtlFile.c_str(), bsp ) )
     {
-	    if ( DumpMtl( mtlFile.c_str(), bsp ) )
+	    if ( DumpMtl( mtlFile.c_str(), bsp, textureRemap ) )
             result = 0;
     }
 
@@ -336,6 +288,109 @@ int _tmain(int argc, _TCHAR* argv[])
     if ( result == 0 )
         cout << "OK!" << endl;
 
-	return result;
+	return true;
+}
+
+void MountPakFiles()
+{
+	// Enumerate the pak files
+	VFS::FileListing pakFiles;
+
+	VFS::EnumerateFiles( 
+		"/",
+		[&] (const char* f) 
+		{
+			if ( strstr(f, ".pk3") != nullptr )
+				pakFiles.insert( f );
+		}, 
+		true );
+
+	for ( auto& f : pakFiles )
+	{
+		cout << "Mounting " << f << endl;
+
+		VFS::AddZip( f.c_str() );
+	}
+}
+
+std::string Rebase(const std::string& oldBase, const std::string& newBase, std::string path)
+{
+	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
+		path = path.substr(oldBase.size());
+	return newBase + path;
+}
+
+bool ExportTexture(const char* source, const char* destination)
+{
+	std::vector<uint8_t> texData;
+	if (!VFS::ReadWholeBinaryFile(source, texData))
+	{
+		return false;
+	}
+
+	// Make sure the output directory is present
+	VFS::MakeNestedDirectories( VFS::BasePath( destination ).c_str() );
+
+	ofstream out(destination, ios::out | ios::binary);
+	if (!out.is_open())
+	{
+		return false;
+	}
+
+	out.write((const char*)&texData[0], texData.size());
+	out.close();
+
+	return true;
+}
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+	if ( argc < 2 )
+		VFS::SetRootDirectory( _getcwd( NULL, 0 ) );
+	else
+		VFS::SetRootDirectory( argv[1] );
+
+	MountPakFiles();
+
+	int totalFiles = 0;
+	VFS::FileListing bspFiles;
+	VFS::EnumerateFiles(
+		"/",
+		[&] (const char* f) 
+		{
+			if ( strstr(f, ".bsp") != nullptr )
+				bspFiles.insert( f );
+			totalFiles++;
+		});
+
+	cout << "Found " << bspFiles.size() << " BSP files in " << totalFiles << " game files." << endl;
+
+	std::string basePath = VFS::GetRootDirectory();
+	std::string outputPath = "output/";
+
+	_mkdir( outputPath.c_str() );
+
+	VFS::FileListing texturesToExport;
+
+	for (auto& bspFile : bspFiles)
+	{
+		string objFile = VFS::ReplaceExtension( bspFile, ".obj" );
+
+		// Strip the path off and replace it
+		objFile = Rebase( basePath, outputPath, objFile );
+
+		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport ) )
+			return 1;
+	}
+
+	cout << "Exporting " << texturesToExport.size() << " textures..." << endl;
+
+	for (auto& t : texturesToExport)
+	{
+		string dest = Rebase(basePath, outputPath, t);
+		ExportTexture(t.c_str(), dest.c_str());
+	}
+
+	return 0;
 }
 
