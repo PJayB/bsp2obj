@@ -144,12 +144,16 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 
 	// Open the material definition file
 	string mtlFile = VFS::ReplaceExtension( objFile, ".mtl" );
+	string entFile = VFS::ReplaceExtension( objFile, "_entities.txt" );
 
     int result = 1;
     if ( DumpObj( objFile, mtlFile.c_str(), bsp ) )
     {
 	    if ( DumpMtl( mtlFile.c_str(), bsp, textureRemap ) )
-            result = 0;
+		{
+			if ( DumpEnts( entFile.c_str(), bsp ) )
+				result = 0;
+		}
     }
 
     delete bsp;

@@ -106,8 +106,8 @@ static void ReadLump( const uint8_t* cursor, std::string& str, const BSP::Lump& 
 {
 	if ( lump.Length > 0 )
 	{
-		str.resize( lump.Length + 1 );
-		memcpy( &str[0], &cursor[lump.Offset], lump.Length );
+		str.reserve( lump.Length + 1 );
+		str = (const char*) &cursor[lump.Offset];
 	}
 }
 
@@ -136,14 +136,14 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	ReadLump( lpBytes, Indices,			lumps[kIndices] );
 	ReadLump( lpBytes, Fogs,			lumps[kFogs] );
 	ReadLump( lpBytes, Faces,			lumps[kFaces] );
-	//ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
+	ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
 	ReadLump( lpBytes, LightVolumes,	lumps[kLightVolumes] );
 	// - vis data (done later)
 	
 	// Read the entities info
 	if ( lumps[kEntities].Length )
 	{
-		//ReadLump( lpBytes, EntityString, lumps[kEntities] );
+		ReadLump( lpBytes, EntityString, lumps[kEntities] );
 	}
 
 	// Visibility data.
