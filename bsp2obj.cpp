@@ -63,6 +63,29 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 	}
 }
 
+bool ExportTexture(const char* source, const char* destination)
+{
+	std::vector<uint8_t> texData;
+	if (!VFS::ReadWholeBinaryFile(source, texData))
+	{
+		return false;
+	}
+
+	// Make sure the output directory is present
+	VFS::MakeNestedDirectories( VFS::BasePath( destination ).c_str() );
+
+	ofstream out(destination, ios::out | ios::binary);
+	if (!out.is_open())
+	{
+		return false;
+	}
+
+	out.write((const char*)&texData[0], texData.size());
+	out.close();
+
+	return true;
+}
+
 bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& texturesToExport )
 {
 	vector<uint8_t> bspData;
@@ -157,29 +180,6 @@ void MountPakFiles()
 
 		VFS::AddZip( f.c_str() );
 	}
-}
-
-bool ExportTexture(const char* source, const char* destination)
-{
-	std::vector<uint8_t> texData;
-	if (!VFS::ReadWholeBinaryFile(source, texData))
-	{
-		return false;
-	}
-
-	// Make sure the output directory is present
-	VFS::MakeNestedDirectories( VFS::BasePath( destination ).c_str() );
-
-	ofstream out(destination, ios::out | ios::binary);
-	if (!out.is_open())
-	{
-		return false;
-	}
-
-	out.write((const char*)&texData[0], texData.size());
-	out.close();
-
-	return true;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
