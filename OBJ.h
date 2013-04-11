@@ -1,11 +1,12 @@
 #pragma once
 
-#include <vector>
+#include <map>
 
-class OBJ
-{
-public:
-	OBJ(void);
-	~OBJ(void);
-};
+class BSP;
+
+typedef std::map<std::string, std::string> StringMap;
+
+bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp );
+bool DumpMtl( const char* filename, const BSP* bsp, const StringMap& textureRemap );
+bool DumpEnts( const char* filename, const BSP* bsp );
 
