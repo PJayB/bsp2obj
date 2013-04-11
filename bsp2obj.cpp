@@ -43,6 +43,22 @@ string SafeMaterial( string mtl )
     return move( mtl );
 }
 
+
+std::string RemoveBase(const std::string& oldBase, std::string path)
+{
+	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
+		path = path.substr(oldBase.size());
+	return path;
+}
+
+std::string Rebase(const std::string& oldBase, const std::string& newBase, std::string path)
+{
+	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
+		path = path.substr(oldBase.size());
+	return newBase + path;
+}
+
+
 const int SF_NODRAW = 0x00200000;
 
 
@@ -77,8 +93,8 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
 	for ( auto& v : bsp->Vertices )
 	{
 		obj << "v " << SafeF( v.Position[0] )
-			<<  " " << SafeF( v.Position[1] )
-			<<  " " << SafeF( v.Position[2]	)
+			<<  " " << SafeF( v.Position[2] )
+			<<  " " << SafeF(-v.Position[1] )
 			<< endl;
 	}
 	obj << "# End Vertex Positions" << endl << endl;
@@ -129,8 +145,8 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
 			size_t j = 1 + f.StartVertexIndex + indices[a * 3 + 1];
 			size_t k = 1 + f.StartVertexIndex + indices[a * 3 + 2];
 			obj << "f "	<< i << "/" << i << "/" << i << " "
-						<< j << "/" << j << "/" << j << " "
 						<< k << "/" << k << "/" << k << " "
+						<< j << "/" << j << "/" << j << " "
 						<< endl;
 		}
 
@@ -212,7 +228,9 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 			if ( i != end(textures) )
 			{
 				// We found a matching texture! Remap it
-				remapping[i->second] = f;
+				remapping[i->second] = RemoveBase( 
+					VFS::GetRootDirectory(),
+					f );
 			}
 		});
 }
@@ -262,7 +280,8 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 	VERBOSE( cout << "Saving to " << objFile < " ... " );
 
 	// Make sure the output directory is present
-	VFS::MakeNestedDirectories( VFS::BasePath( objFile ).c_str() );
+	string objPath = VFS::BasePath( objFile );
+	VFS::MakeNestedDirectories( objPath.c_str() );
 
 	// Collect textures and find their real identities
 	StringMap textureRemap;
@@ -270,6 +289,7 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 
 	for (auto& i : textureRemap)
 	{
+		// Add it to the export list
 		texturesToExport.insert(i.second);
 	}
 
@@ -311,13 +331,6 @@ void MountPakFiles()
 
 		VFS::AddZip( f.c_str() );
 	}
-}
-
-std::string Rebase(const std::string& oldBase, const std::string& newBase, std::string path)
-{
-	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
-		path = path.substr(oldBase.size());
-	return newBase + path;
 }
 
 bool ExportTexture(const char* source, const char* destination)
@@ -374,10 +387,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (auto& bspFile : bspFiles)
 	{
-		string objFile = VFS::ReplaceExtension( bspFile, ".obj" );
-
-		// Strip the path off and replace it
-		objFile = Rebase( basePath, outputPath, objFile );
+		string objFile = outputPath + VFS::BaseName( bspFile ) + ".obj";
 
 		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport ) )
 			return 1;
