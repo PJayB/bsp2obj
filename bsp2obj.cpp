@@ -239,8 +239,6 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 {
 	vector<uint8_t> bspData;
 
-	cout << "Converting " << bspFile << " ... ";
-
 	if ( !VFS::ReadWholeBinaryFile( bspFile, bspData ) )
 	{
 		cout << "FAILED" << endl; 
@@ -385,9 +383,12 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	VFS::FileListing texturesToExport;
 
+	int bspIndex = 0;
 	for (auto& bspFile : bspFiles)
 	{
 		string objFile = outputPath + VFS::BaseName( bspFile ) + ".obj";
+
+		cout << "Converting map #" << ++bspIndex << " " << bspFile << " ... ";
 
 		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport ) )
 			return 1;
@@ -395,11 +396,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	cout << "Exporting " << texturesToExport.size() << " textures..." << endl;
 
+	size_t textureIndex = 0;
 	for (auto& t : texturesToExport)
 	{
 		string dest = Rebase(basePath, outputPath, t);
 		ExportTexture(t.c_str(), dest.c_str());
+
+		size_t percent = (textureIndex * 100 / texturesToExport.size());
+		cout << percent << "%: " << t << "\r";
 	}
+
+	cout << "Export complete." << endl;
 
 	return 0;
 }
