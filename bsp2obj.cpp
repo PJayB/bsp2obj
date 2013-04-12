@@ -6,6 +6,7 @@
 #include "VFS/VFS.h"
 #include "VFS/FileUtils.h"
 #include "OBJ.h"
+#include "ShaderDB.h"
 
 #include <direct.h> // TODO remove me
 
@@ -23,14 +24,14 @@ using namespace std;
 
 
 
-std::string RemoveBase(const std::string& oldBase, std::string path)
+string RemoveBase(const string& oldBase, string path)
 {
 	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
 		path = path.substr(oldBase.size());
 	return path;
 }
 
-std::string Rebase(const std::string& oldBase, const std::string& newBase, std::string path)
+string Rebase(const string& oldBase, const string& newBase, string path)
 {
 	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
 		path = path.substr(oldBase.size());
@@ -65,7 +66,7 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 
 bool ExportTexture(const char* source, const char* destination)
 {
-	std::vector<uint8_t> texData;
+	vector<uint8_t> texData;
 	if (!VFS::ReadWholeBinaryFile(source, texData))
 	{
 		return false;
@@ -186,6 +187,24 @@ void MountPakFiles()
 	}
 }
 
+int ExtractShaderSource(string& aggregatedShaderSource)
+{
+	int count = 0; 
+
+	VFS::EnumerateFiles(
+		"/base/shaders/",
+		[&] (const char* f)
+		{
+			if ( strstr( f, ".shader" ) != nullptr )
+			{
+				VFS::ReadWholeTextFile( f, aggregatedShaderSource );
+				count++;
+			}
+		});
+
+	return count;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	if ( argc < 2 )
@@ -208,8 +227,22 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	cout << "Found " << bspFiles.size() << " BSP files in " << totalFiles << " game files." << endl;
 
-	std::string basePath = VFS::GetRootDirectory();
-	std::string outputPath = "output/";
+	if ( !bspFiles.size() )
+		return 0;
+
+	string aggregatedShaderSource;
+	int shaderCount = ExtractShaderSource(aggregatedShaderSource);
+	cout << "Read " << aggregatedShaderSource.size() << " bytes in " << shaderCount << " shaders." << endl;
+
+	ShaderDB shaderDB;
+	if ( !shaderDB.Parse( aggregatedShaderSource ) )
+		cout << "WARNING: failed to parse shaders! You may be missing some textures." << endl;
+
+	return 0;
+
+
+	string basePath = VFS::GetRootDirectory();
+	string outputPath = "output/";
 
 	_mkdir( outputPath.c_str() );
 

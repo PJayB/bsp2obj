@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 class Shader
 {
 };
@@ -11,6 +13,10 @@ public:
 	ShaderDB(void);
 	~ShaderDB(void);
 
-	
+	bool Parse( const std::string& shaderSource );
+
+private:
+
+
 };
 
