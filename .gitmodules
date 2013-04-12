@@ -4,3 +4,6 @@
 [submodule "zlib"]
 	path = zlib
 	url = ssh://pjblewis@pjblewis.com/~/git/3pp/zlib.git
+[submodule "Luthor"]
+	path = Luthor
+	url = ssh://pjblewis@pjblewis.com/~/git/1pp/Luthor.git

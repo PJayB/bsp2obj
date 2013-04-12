@@ -91,6 +91,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="Luthor\Luthor.vcxproj">
+      <Project>{dfa6fb8d-b1e9-4b14-b861-4f7c792c9a1f}</Project>
+    </ProjectReference>
     <ProjectReference Include="VFS\VFS.vcxproj">
       <Project>{d0f88bbc-af0e-47e3-93a1-b0b99eb57bc8}</Project>
     </ProjectReference>
