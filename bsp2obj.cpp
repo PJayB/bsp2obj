@@ -251,7 +251,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ofstream shaderDump( shaderDumpFile.c_str() );
 	if ( shaderDump.is_open() )
 	{
-		shaderDump << aggregatedShaderSource;
+		shaderDump.write(aggregatedShaderSource.c_str(), aggregatedShaderSource.size());
 		shaderDump.close();
 	}
 
