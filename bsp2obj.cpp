@@ -238,13 +238,22 @@ int _tmain(int argc, _TCHAR* argv[])
 	if ( !shaderDB.Parse( aggregatedShaderSource ) )
 		cout << "WARNING: failed to parse shaders! You may be missing some textures." << endl;
 
-	return 0;
+	//return 0;
 
 
 	string basePath = VFS::GetRootDirectory();
 	string outputPath = "output/";
 
 	_mkdir( outputPath.c_str() );
+
+
+	string shaderDumpFile = outputPath + "shaderDump.txt";
+	ofstream shaderDump( shaderDumpFile.c_str() );
+	if ( shaderDump.is_open() )
+	{
+		shaderDump << aggregatedShaderSource;
+		shaderDump.close();
+	}
 
 	VFS::FileListing texturesToExport;
 
