@@ -230,6 +230,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if ( !bspFiles.size() )
 		return 0;
 
+	/*
 	string aggregatedShaderSource;
 	int shaderCount = ExtractShaderSource(aggregatedShaderSource);
 	cout << "Read " << aggregatedShaderSource.size() << " bytes in " << shaderCount << " shaders." << endl;
@@ -237,7 +238,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ShaderDB shaderDB;
 	if ( !shaderDB.Parse( aggregatedShaderSource ) )
 		cout << "WARNING: failed to parse shaders! You may be missing some textures." << endl;
-
+	*/
 	//return 0;
 
 
@@ -247,6 +248,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	_mkdir( outputPath.c_str() );
 
 
+	/*
 	string shaderDumpFile = outputPath + "shaderDump.txt";
 	ofstream shaderDump( shaderDumpFile.c_str() );
 	if ( shaderDump.is_open() )
@@ -254,6 +256,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		shaderDump.write(aggregatedShaderSource.c_str(), aggregatedShaderSource.size());
 		shaderDump.close();
 	}
+	*/
+
 
 	VFS::FileListing texturesToExport;
 

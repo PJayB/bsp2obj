@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "zlib\zlib.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VFS", "VFS\VFS.vcxproj", "{D0F88BBC-AF0E-47E3-93A1-B0B99EB57BC8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Luthor", "Luthor\Luthor.vcxproj", "{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -37,6 +39,14 @@ Global
 		{D0F88BBC-AF0E-47E3-93A1-B0B99EB57BC8}.Release|Win32.Build.0 = Release|Win32
 		{D0F88BBC-AF0E-47E3-93A1-B0B99EB57BC8}.Release|x64.ActiveCfg = Release|x64
 		{D0F88BBC-AF0E-47E3-93A1-B0B99EB57BC8}.Release|x64.Build.0 = Release|x64
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Debug|Win32.Build.0 = Debug|Win32
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Debug|x64.ActiveCfg = Debug|x64
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Debug|x64.Build.0 = Debug|x64
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Release|Win32.ActiveCfg = Release|Win32
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Release|Win32.Build.0 = Release|Win32
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Release|x64.ActiveCfg = Release|x64
+		{DFA6FB8D-B1E9-4B14-B861-4F7C792C9A1F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
