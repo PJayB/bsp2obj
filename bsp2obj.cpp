@@ -1,26 +1,124 @@
 #include "BSP.h"
 #include "OBJ.h"
 
-#include <vector>
-#include <iostream>
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
-#include <map>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <assert.h>
+#include <fnmatch.h>
 #include <string.h>
+#include <unistd.h>
+
+#include <physfs.h>
 
 using namespace std;
 
 #define VERBOSE( x )	
 
+using FileListing = unordered_set<string>;
 
-
-string RemoveBase(const string& oldBase, string path)
+string BaseName(string in)
 {
-	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
-		path = path.substr(oldBase.size());
-	return path;
+	// Find the location of the file and extension
+	string tmp = in;
+	string::size_type dotpos = tmp.find_last_of(".");
+	string::size_type dirpos = tmp.find_last_of("/\\");
+	
+	// If there were no path slashes, start from the beginning
+	if (dirpos == string::npos) { dirpos = 0; }
+	// Otherwise start from the character after
+	else { dirpos++; }
+	
+	// If there was no dot, read to the end
+	// Ensure the dot comes before the slash
+	if (dotpos == string::npos || dotpos < dirpos) 
+	{ 
+		dotpos = tmp.size(); 
+	}
+	
+	// Strip the file and extension
+	return tmp.substr(dirpos, dotpos - dirpos);
+}
+
+// Read a whole file. Free the blob afterwards.
+bool ReadWholeBinaryFile(const char* fullpath, vector<uint8_t>& out)
+{
+	auto file = PHYSFS_openRead(fullpath);
+	if ( !file )
+	{
+		return false;
+	}
+
+	// Get the size of the file
+	auto size = PHYSFS_fileLength(file);
+	if (size < 0) {
+		return false;
+	}
+
+	out.resize(size);
+	if (size > 0) {
+		size = PHYSFS_readBytes(file, out.data(), size);
+
+		// trim the vector if only partial data was read
+		if (size >= 0) {
+			out.resize(size);
+		}
+	}
+
+	PHYSFS_close(file);
+	return size >= 0;
+}
+
+template<typename TFunc> void EnumerateFiles(
+	const char* path,
+	TFunc&& func)
+{
+	char** files = PHYSFS_enumerateFiles(path);
+	for (char** file = files; *file != nullptr; ++file) {
+		func(*file);
+	}
+	PHYSFS_freeList(files);
+}
+
+template<typename TFunc> void EnumerateFilesGlob(
+	const filesystem::path& path,
+	const char* glob,
+	TFunc&& func)
+{
+	EnumerateFiles(path.c_str(),
+		[glob, &path, func = move(func)] (const char* file) {
+			if (fnmatch(glob, file, FNM_CASEFOLD) == 0) {
+				func((path / file).c_str());
+			}
+		});
+}
+
+// Note: globbing is on filename only, not on path
+template<typename TFunc> void EnumerateFilesGlob(
+	const filesystem::path& glob,
+	TFunc&& func)
+{
+	filesystem::path path = glob.has_parent_path() ? glob.parent_path() : "/";
+	EnumerateFilesGlob(path, glob.filename().c_str(), std::forward<TFunc>(func));
+}
+
+// Replace an extension
+string ReplaceExtension(string in, const char* const extension)
+{
+	// Find the last .
+	string::size_type dotPos = in.find_last_of(".");
+	if (dotPos == string::npos)
+	{
+		return in + extension;
+	}
+	
+	// Replace the string
+	return in.substr(0, dotPos) + extension;
 }
 
 string Rebase(const string& oldBase, const string& newBase, string path)
@@ -35,7 +133,7 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 {
 	for (auto& t : bsp->Materials)
 	{
-		string name = VFS::MakeFullyQualifiedFileName( t.Name );
+		string name = t.Name;
 		
 		// Try and find variants - HACK - should really read these from shader files
 		string targa = name + ".tga";
@@ -43,47 +141,45 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 		string png = name + ".png";
 		string& path = name;
 
-		if ( VFS::FileExists( targa.c_str() ) )
+		if ( PHYSFS_exists( targa.c_str() ) )
 			path = targa;
-		else if ( VFS::FileExists( jpeg.c_str() ) )
+		else if ( PHYSFS_exists( jpeg.c_str() ) )
 			path = jpeg;
-		else if ( VFS::FileExists( png.c_str() ) ) 
+		else if ( PHYSFS_exists( png.c_str() ) ) 
 			path = png;
 
-		remapping[t.Name] = RemoveBase( 
-			VFS::GetRootDirectory(),
-			path );
+		remapping[t.Name] = path;
 	}
 }
 
 bool ExportTexture(const char* source, const char* destination)
 {
 	vector<uint8_t> texData;
-	if (!VFS::ReadWholeBinaryFile(source, texData))
+	if (!ReadWholeBinaryFile(source, texData))
 	{
 		return false;
 	}
 
 	// Make sure the output directory is present
-	VFS::MakeNestedDirectories( VFS::BasePath( destination ).c_str() );
+	PHYSFS_mkdir(destination);
 
-	ofstream out(destination, ios::out | ios::binary);
-	if (!out.is_open())
+	auto file = PHYSFS_openWrite(destination);
+	if (!file)
 	{
 		return false;
 	}
 
-	out.write((const char*)&texData[0], texData.size());
-	out.close();
+	PHYSFS_writeBytes(file, (const char*)&texData[0], texData.size());
+	PHYSFS_close(file);
 
 	return true;
 }
 
-bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& texturesToExport )
+bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesToExport )
 {
 	vector<uint8_t> bspData;
 
-	if ( !VFS::ReadWholeBinaryFile( bspFile, bspData ) )
+	if ( !ReadWholeBinaryFile( bspFile, bspData ) )
 	{
 		cout << "FAILED" << endl; 
 		return false;
@@ -121,10 +217,6 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 
 	VERBOSE( cout << "Saving to " << objFile < " ... " );
 
-	// Make sure the output directory is present
-	string objPath = VFS::BasePath( objFile );
-	VFS::MakeNestedDirectories( objPath.c_str() );
-
 	// Collect textures and find their real identities
 	StringMap textureRemap;
 	RemapTextures( bsp, textureRemap );
@@ -136,8 +228,8 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 	}
 
 	// Open the material definition file
-	string mtlFile = VFS::ReplaceExtension( objFile, ".mtl" );
-	string entFile = VFS::ReplaceExtension( objFile, "_entities.txt" );
+	string mtlFile = ReplaceExtension( objFile, ".mtl" );
+	string entFile = ReplaceExtension( objFile, "_entities.txt" );
 
     int result = 1;
     if ( DumpObj( objFile, mtlFile.c_str(), bsp ) )
@@ -157,106 +249,74 @@ bool ParseBSP( const char* bspFile, const char* objFile, VFS::FileListing& textu
 	return true;
 }
 
+static bool StringEndsWith(const char* str, const char* with, size_t withLen)
+{
+	size_t strLen = strlen(str);
+	if (strLen < withLen) {
+		return false;
+	}
+
+	return strcasecmp(str + (strLen - withLen), with) == 0;
+}
+
 void MountPakFiles()
 {
 	// Enumerate the pak files
-	VFS::FileListing pakFiles;
+	EnumerateFiles("/",
+		[] (const char* file) {
+			if (StringEndsWith(file, ".pk3", 4)) {
+				filesystem::path path(PHYSFS_getRealDir(file));
+				path /= file;
 
-	VFS::EnumerateFiles( 
-		"/",
-		[&] (const char* f) 
-		{
-			if ( strstr(f, ".pk3") != nullptr )
-				pakFiles.insert( f );
-		}, 
-		true );
-
-	for ( auto& f : pakFiles )
-	{
-		cout << "Mounting " << f << endl;
-
-		VFS::AddZip( f.c_str() );
-	}
-}
-
-int ExtractShaderSource(string& aggregatedShaderSource)
-{
-	int count = 0; 
-
-	VFS::EnumerateFiles(
-		"/base/shaders/",
-		[&] (const char* f)
-		{
-			if ( strstr( f, ".shader" ) != nullptr )
-			{
-				VFS::ReadWholeTextFile( f, aggregatedShaderSource );
-				count++;
+				if (!PHYSFS_mount(path.c_str(), nullptr, 0)) {
+					cerr << "Warning: failed to mount " << file << endl;
+				}
 			}
 		});
-
-	return count;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
-	if ( argc < 2 )
-		VFS::SetRootDirectory( _getcwd( NULL, 0 ) );
-	else
-		VFS::SetRootDirectory( argv[1] );
+	if (!PHYSFS_init(argv[0])) {
+		cerr << "Failed to init phsyfs" << endl;
+		return EXIT_FAILURE;
+	}
+
+	auto cwd = getcwd(nullptr, 0);
+	if (!PHYSFS_setWriteDir(cwd)) {
+		cerr << "Failed to set the current write directory" << endl;
+		PHYSFS_deinit();
+		return EXIT_FAILURE;
+	}
+
+	const char* root = argc < 2 ? cwd : argv[1];
+	if (!PHYSFS_mount(root, nullptr, 0)) {
+		cerr << "Failed to mount " << root << endl;
+		PHYSFS_deinit();
+		return EXIT_FAILURE;
+	}
 
 	MountPakFiles();
 
-	int totalFiles = 0;
-	VFS::FileListing bspFiles;
-	VFS::EnumerateFiles(
-		"/",
-		[&] (const char* f) 
-		{
-			if ( strstr(f, ".bsp") != nullptr )
-				bspFiles.insert( f );
-			totalFiles++;
+	FileListing bspFiles;
+	if (argc > 2) {
+		for (int i = 2; i < argc; ++i) {
+			EnumerateFilesGlob("/", argv[i], [&] (const char* file) {
+				bspFiles.insert(file);
+			});
+		}
+	} else {
+		EnumerateFilesGlob("maps/*.bsp", [&] (const char* file) {
+			bspFiles.insert(file);
 		});
-
-	cout << "Found " << bspFiles.size() << " BSP files in " << totalFiles << " game files." << endl;
-
-	if ( !bspFiles.size() )
-		return 0;
-
-	/*
-	string aggregatedShaderSource;
-	int shaderCount = ExtractShaderSource(aggregatedShaderSource);
-	cout << "Read " << aggregatedShaderSource.size() << " bytes in " << shaderCount << " shaders." << endl;
-
-	ShaderDB shaderDB;
-	if ( !shaderDB.Parse( aggregatedShaderSource ) )
-		cout << "WARNING: failed to parse shaders! You may be missing some textures." << endl;
-	*/
-	//return 0;
-
-
-	string basePath = VFS::GetRootDirectory();
-	string outputPath = "output/";
-
-	_mkdir( outputPath.c_str() );
-
-
-	/*
-	string shaderDumpFile = outputPath + "shaderDump.txt";
-	ofstream shaderDump( shaderDumpFile.c_str() );
-	if ( shaderDump.is_open() )
-	{
-		shaderDump.write(aggregatedShaderSource.c_str(), aggregatedShaderSource.size());
-		shaderDump.close();
 	}
-	*/
 
-
-	VFS::FileListing texturesToExport;
+	FileListing texturesToExport;
 
 	int bspIndex = 0;
 	for (auto& bspFile : bspFiles)
 	{
-		string objFile = outputPath + VFS::BaseName( bspFile ) + ".obj";
+		string objFile = BaseName( bspFile ) + ".obj";
 
 		cout << "Converting map #" << ++bspIndex << " " << bspFile << " ... ";
 
@@ -272,12 +332,12 @@ int _tmain(int argc, _TCHAR* argv[])
 		size_t percent = (textureIndex * 100 / texturesToExport.size());
 		cout << percent << "%: " << t << "\r";
 
-		string dest = Rebase(basePath, outputPath, t);
-		ExportTexture(t.c_str(), dest.c_str());
+		ExportTexture(t.c_str(), t.c_str());
 	}
 
 	cout << "Export complete." << endl;
 
-	return 0;
+	PHYSFS_deinit();
+	return EXIT_SUCCESS;
 }
 

@@ -121,13 +121,20 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	ReadLump( lpBytes, LeafBrushes,		lumps[kLeafBrushes] );
 	ReadLump( lpBytes, Models,			lumps[kModels] );
 	ReadLump( lpBytes, Brushes,			lumps[kBrushes] );
-	ReadLump( lpBytes, BrushSides,		lumps[kBrushSides] );
-	ReadLump( lpBytes, Vertices,		lumps[kVertices] );
+	if (header->Format == RBSP_Format) {
+		ReadLump(lpBytes, BrushSidesR,	lumps[kBrushSides]);
+		ReadLump(lpBytes, VerticesR,	lumps[kVertices]);
+		ReadLump(lpBytes, FacesR,		lumps[kFaces]);
+		ReadLump(lpBytes, LightVolumesR,lumps[kLightVolumes]);
+	} else {
+		ReadLump(lpBytes, BrushSides, 	lumps[kBrushSides]);
+		ReadLump(lpBytes, Vertices,		lumps[kVertices]);
+		ReadLump(lpBytes, Faces,		lumps[kFaces]);
+		ReadLump(lpBytes, LightVolumes,	lumps[kLightVolumes]);
+	}
 	ReadLump( lpBytes, Indices,			lumps[kIndices] );
 	ReadLump( lpBytes, Fogs,			lumps[kFogs] );
-	ReadLump( lpBytes, Faces,			lumps[kFaces] );
 	ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
-	ReadLump( lpBytes, LightVolumes,	lumps[kLightVolumes] );
 	// - vis data (done later)
 	
 	// Read the entities info
