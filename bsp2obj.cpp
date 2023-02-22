@@ -154,6 +154,13 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 
 bool ExportTexture(const char* source, const char* destination)
 {
+	// If it already exists, don't do anything
+	filesystem::path outputPath(destination);
+	if (filesystem::exists(outputPath)) {
+		return true;
+	}
+
+	// Read the entire input file
 	vector<uint8_t> texData;
 	if (!ReadWholeBinaryFile(source, texData))
 	{
@@ -161,16 +168,16 @@ bool ExportTexture(const char* source, const char* destination)
 	}
 
 	// Make sure the output directory is present
-	PHYSFS_mkdir(destination);
+	filesystem::create_directories(outputPath.parent_path());
 
-	auto file = PHYSFS_openWrite(destination);
-	if (!file)
-	{
+	// Output the file
+    ofstream out(destination, ios::out | ios::binary);
+    if (!out.is_open()) {
 		return false;
 	}
 
-	PHYSFS_writeBytes(file, (const char*)&texData[0], texData.size());
-	PHYSFS_close(file);
+    out.write((const char*)&texData[0], texData.size());
+    out.close();
 
 	return true;
 }
@@ -301,7 +308,7 @@ int main(int argc, char* argv[])
 	FileListing bspFiles;
 	if (argc > 2) {
 		for (int i = 2; i < argc; ++i) {
-			EnumerateFilesGlob("/", argv[i], [&] (const char* file) {
+			EnumerateFilesGlob(argv[i], [&] (const char* file) {
 				bspFiles.insert(file);
 			});
 		}
