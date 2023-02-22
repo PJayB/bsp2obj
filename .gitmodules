@@ -1,6 +1,0 @@
-[submodule "VFS"]
-	path = VFS
-	url = ssh://pjblewis@pjblewis.com/~/git/1pp/VFS.git
-[submodule "zlib"]
-	path = zlib
-	url = ssh://pjblewis@pjblewis.com/~/git/3pp/zlib.git
