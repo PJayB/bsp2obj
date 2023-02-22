@@ -1,16 +1,6 @@
-/*
- *  BSP.cpp
- *  CameraTest
- *
- *  Created by Peter J. B. Lewis on 21/09/2010.
- *  Copyright 2010 Roaring Fist Entertainment. All rights reserved.
- *
- */
-
-#include "stdafx.h"
 #include "BSP.h"
-
-#include <assert.h>
+#include <cassert>
+#include <memory.h>
 
 BSP* BSP::Create( const void* lpData, size_t cbSize )
 {

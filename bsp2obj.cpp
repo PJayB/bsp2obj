@@ -1,14 +1,5 @@
-// bsp2obj.cpp : Defines the entry point for the console application.
-//
-
-#include "stdafx.h"
 #include "BSP.h"
-#include "VFS/VFS.h"
-#include "VFS/FileUtils.h"
 #include "OBJ.h"
-#include "ShaderDB.h"
-
-#include <direct.h> // TODO remove me
 
 #include <vector>
 #include <iostream>
@@ -17,6 +8,7 @@
 #include <map>
 
 #include <assert.h>
+#include <string.h>
 
 using namespace std;
 

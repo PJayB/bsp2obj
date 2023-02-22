@@ -1,17 +1,9 @@
-/*
- *  BSP.h
- *  CameraTest
- *
- *  Created by Peter J. B. Lewis on 21/09/2010.
- *  Copyright 2010 Roaring Fist Entertainment. All rights reserved.
- *
- */
-
 #ifndef __BSP_H__
 #define __BSP_H__
 
+#include <cstdlib>
 #include <vector>
-#include <cstdint>
+#include <string>
 
 #define MAXLIGHTMAPS 4
 #define BSP_EPSILON 0.03125f

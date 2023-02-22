@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "OBJ.h"
 #include "BSP.h"
 
@@ -12,7 +11,7 @@ using namespace std;
 string SafeF( float f )
 {
 	char tmp[128];
-	sprintf_s(
+	snprintf(
 		tmp, sizeof(tmp),
 		"%f", f );
 	return tmp;
