@@ -2,6 +2,119 @@
 #include <cassert>
 #include <memory.h>
 
+namespace IBSP
+{
+	struct BrushSide
+	{
+		uint32_t				Plane;
+		int32_t					TextureIndex;
+	};
+	
+	struct Vertex
+	{
+		float					Position[3];
+		float					TexCoord[2];
+		float					LMCoord[2];	// Lightmap coordinate.
+		float					Normal[3];
+		uint8_t					Colour[4];
+	};
+	
+	struct Face
+	{
+		int32_t					TextureID;
+		int32_t					FogID;
+		uint32_t				FaceType;
+
+		uint32_t				StartVertexIndex;
+		uint32_t				NumVertices;
+
+		uint32_t				StartIndex;
+		uint32_t				NumIndices;
+
+		uint32_t				LightMapID;
+		uint32_t				LMX; // "The face's lightmap corner in the image"
+		uint32_t				LMY;
+		uint32_t				LMWidth; // Size of the lightmap section
+		uint32_t				LMHeight;
+		
+		float					LMOrigin[3]; // 3D origin of lightmap (???)
+		float					LMVecs[3][3]; // 3D space for s and t unit vectors (???)
+		
+		uint32_t				BezierDimensions[2];
+	};
+	
+	struct LightVolume
+	{
+		uint8_t					Ambient[3];
+		uint8_t					Directional[3];
+		uint8_t					Direction[2]; // phi, theta.
+	};
+}
+
+template<typename T> void copy_array(T& dst, const T& src)
+{
+    memcpy(dst, src, sizeof(src));
+}
+
+static BSP::BrushSide ibsp_to_rbsp(const IBSP::BrushSide& b)
+{
+    BSP::BrushSide a;
+    memset(&a, 0, sizeof(a));
+
+    a.Plane = b.Plane;
+    a.TextureIndex = b.TextureIndex;
+    a.DrawSurfIndex = -1;
+    return a;
+}
+
+static BSP::Vertex ibsp_to_rbsp(const IBSP::Vertex& b)
+{
+    BSP::Vertex a;
+    memset(&a, 0, sizeof(a));
+
+    copy_array(a.Position, b.Position);
+    copy_array(a.TexCoord, b.TexCoord);
+    copy_array(a.LMCoord[0], b.LMCoord);
+    copy_array(a.Normal, b.Normal);
+    return a;
+}
+
+static BSP::Face ibsp_to_rbsp(const IBSP::Face& b)
+{
+    BSP::Face a;
+    memset(&a, 0, sizeof(a));
+
+    a.TextureID = b.TextureID;
+    a.FogID = b.FogID;
+    a.FaceType = b.FaceType;
+    a.StartVertexIndex = b.StartVertexIndex;
+    a.NumVertices = b.NumVertices;
+    a.StartIndex = b.StartIndex;
+    a.NumIndices = b.NumIndices;
+    a.LightMapIDs[0] = b.LightMapID;
+    for (int i = 1; i < BSP::MaxLightMaps; ++i)
+        a.LightMapIDs[i] = BSP::kLightMapNone;
+    a.LMX[0] = b.LMX;
+    a.LMY[0] = b.LMY;
+	a.LMWidth = b.LMWidth;
+	a.LMHeight = b.LMHeight;
+    copy_array(a.LMOrigin, b.LMOrigin);
+    copy_array(a.LMVecs, b.LMVecs);
+    copy_array(a.BezierDimensions, b.BezierDimensions);
+    return a;
+}
+
+static BSP::LightVolume ibsp_to_rbsp(const IBSP::LightVolume& b)
+{
+    BSP::LightVolume a;
+    memset(&a, 0, sizeof(a));
+
+    copy_array(a.Ambient[0], b.Ambient);
+    copy_array(a.Directional[0], b.Directional);
+    copy_array(a.Direction, b.Direction);
+    return a;
+}
+
 BSP* BSP::Create( const void* lpData, size_t cbSize )
 {
 	BSP* bsp = new BSP;
@@ -92,6 +205,19 @@ static void ReadLump( const uint8_t* cursor, std::vector<T>& array, const BSP::L
 	}
 }
 
+template<class IBSP_T, class RBSP_T>
+static void UpgradeLump(const uint8_t* cursor, std::vector<RBSP_T>& rbspArray, const BSP::Lump& lump)
+{
+	std::vector<IBSP_T> ibspArray;
+	ReadLump(cursor, ibspArray, lump);
+
+	// Convert from IBSP to RBSP
+	rbspArray.reserve(ibspArray.size());
+	for (const auto& i : ibspArray) {
+		rbspArray.push_back(ibsp_to_rbsp(i));
+	}
+}
+
 static void ReadLump( const uint8_t* cursor, std::string& str, const BSP::Lump& lump )
 {
 	if ( lump.Length > 0 )
@@ -115,29 +241,35 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	
 	// Read basic lumps
 	// - entities (done later)
-	ReadLump( lpBytes, Materials,		lumps[kTextures] );
-	ReadLump( lpBytes, Planes,			lumps[kPlanes] );
-	ReadLump( lpBytes, Nodes,			lumps[kNodes] );
-	ReadLump( lpBytes, Leaves,			lumps[kLeaves] );
-	ReadLump( lpBytes, LeafFaces,		lumps[kLeafFaces] );
-	ReadLump( lpBytes, LeafBrushes,		lumps[kLeafBrushes] );
-	ReadLump( lpBytes, Models,			lumps[kModels] );
-	ReadLump( lpBytes, Brushes,			lumps[kBrushes] );
+	ReadLump( lpBytes, Materials,			lumps[kTextures] );
+	ReadLump( lpBytes, Planes,				lumps[kPlanes] );
+	ReadLump( lpBytes, Nodes,				lumps[kNodes] );
+	ReadLump( lpBytes, Leaves,				lumps[kLeaves] );
+	ReadLump( lpBytes, LeafFaces,			lumps[kLeafFaces] );
+	ReadLump( lpBytes, LeafBrushes,			lumps[kLeafBrushes] );
+	ReadLump( lpBytes, Models,				lumps[kModels] );
+	ReadLump( lpBytes, Brushes,				lumps[kBrushes] );
 	if (header->Format == RBSP_Format) {
-		ReadLump(lpBytes, BrushSidesR,	lumps[kBrushSides]);
-		ReadLump(lpBytes, VerticesR,	lumps[kVertices]);
-		ReadLump(lpBytes, FacesR,		lumps[kFaces]);
-		ReadLump(lpBytes, LightVolumesR,lumps[kLightVolumes]);
+		ReadLump(lpBytes, BrushSides,		lumps[kBrushSides]);
+		ReadLump(lpBytes, Vertices,			lumps[kVertices]);
+		ReadLump(lpBytes, Faces,			lumps[kFaces]);
+		ReadLump(lpBytes, LightVolumes, 	lumps[kLightVolumes]);
 	} else {
-		ReadLump(lpBytes, BrushSides, 	lumps[kBrushSides]);
-		ReadLump(lpBytes, Vertices,		lumps[kVertices]);
-		ReadLump(lpBytes, Faces,		lumps[kFaces]);
-		ReadLump(lpBytes, LightVolumes,	lumps[kLightVolumes]);
+		UpgradeLump<IBSP::BrushSide>
+				(lpBytes, BrushSides, 		lumps[kBrushSides]);
+		UpgradeLump<IBSP::Vertex>
+				(lpBytes, Vertices,			lumps[kVertices]);
+		UpgradeLump<IBSP::Face>
+				(lpBytes, Faces,			lumps[kFaces]);
+		UpgradeLump<IBSP::LightVolume>
+				(lpBytes, LightVolumes,		lumps[kLightVolumes]);
 	}
-	ReadLump( lpBytes, Indices,			lumps[kIndices] );
-	ReadLump( lpBytes, Fogs,			lumps[kFogs] );
-	ReadLump( lpBytes, LightMaps,		lumps[kLightmaps] );
+	ReadLump( lpBytes, Indices,				lumps[kIndices] );
+	ReadLump( lpBytes, Fogs,				lumps[kFogs] );
+	ReadLump( lpBytes, LightMaps,			lumps[kLightmaps] );
 	// - vis data (done later)
+
+	// - todo: light grid data
 	
 	// Read the entities info
 	if ( lumps[kEntities].Length )
@@ -174,16 +306,12 @@ void BSP::Unload()
 	Models.clear();
 	Brushes.clear();
 	BrushSides.clear();
-	BrushSidesR.clear();
 	Vertices.clear();
-	VerticesR.clear();
 	Indices.clear();
 	Fogs.clear();
 	Faces.clear();
-	FacesR.clear();
 	LightMaps.clear();
 	LightVolumes.clear();
-	LightVolumesR.clear();
 	EntityString.clear();
 	ClusterBits.clear();
 	

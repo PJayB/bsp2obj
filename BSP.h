@@ -5,14 +5,27 @@
 #include <vector>
 #include <string>
 
-#define MAXLIGHTMAPS 4
-#define BSP_EPSILON 0.03125f
-	
 class BSP
 {
 public:
+	static constexpr uint32_t MaxLightMaps = 4;
+
 	static constexpr uint32_t RBSP_Format = (('P'<<24)+('S'<<16)+('B'<<8)+'R');
 	static constexpr uint32_t IBSP_Format = (('P'<<24)+('S'<<16)+('B'<<8)+'I');
+
+	// There are plenty more but this is the most commonly relevant one
+	enum eSurfaceFlags
+	{
+		kSurfNoDraw     	= 0x80
+	};
+
+	enum eLightMapIndices
+	{
+		kLightMap2D 		= -4,	// shader is for 2D rendering
+		kLightMapByVertex 	= -3,	// pre-lit triangle models
+		kLightMapWhiteImage = -2,
+		kLightMapNone 		= -1,
+	};
 
 	enum eLumpID
 	{
@@ -69,18 +82,9 @@ public:
 	{
 		float					Position[3];
 		float					TexCoord[2];
-		float					LMCoord[2];	// Lightmap coordinate.
+		float					LMCoord[MaxLightMaps][2];	// Lightmap coordinate.
 		float					Normal[3];
-		uint8_t					Colour[4];
-	};
-	
-	struct VertexR
-	{
-		float					Position[3];
-		float					TexCoord[2];
-		float					LMCoord[MAXLIGHTMAPS][2];	// Lightmap coordinate.
-		float					Normal[3];
-		uint8_t					Colour[MAXLIGHTMAPS][4];
+		uint8_t					Colour[MaxLightMaps][4];
 	};
 	
 	struct Face
@@ -95,36 +99,12 @@ public:
 		uint32_t				StartIndex;
 		uint32_t				NumIndices;
 
-		uint32_t				LightMapID;
-		uint32_t				LMX; // "The face's lightmap corner in the image"
-		uint32_t				LMY;
-		uint32_t				LMWidth; // Size of the lightmap section
-		uint32_t				LMHeight;
-		
-		float					LMOrigin[3]; // 3D origin of lightmap (???)
-		float					LMVecs[3][3]; // 3D space for s and t unit vectors (???)
-		
-		uint32_t				BezierDimensions[2];
-	};
-	
-	struct FaceR
-	{
-		int32_t					TextureID;
-		int32_t					FogID;
-		uint32_t				FaceType;
+		uint8_t					LightMapStyles[MaxLightMaps];
+		uint8_t					VertexStyles[MaxLightMaps];
 
-		uint32_t				StartVertexIndex;
-		uint32_t				NumVertices;
-
-		uint32_t				StartIndex;
-		uint32_t				NumIndices;
-
-		uint8_t					LightMapStyles[MAXLIGHTMAPS];
-		uint8_t					VertexStyles[MAXLIGHTMAPS];
-
-		uint32_t				LightMapIDs[MAXLIGHTMAPS];
-		uint32_t				LMX[MAXLIGHTMAPS]; // "The face's lightmap corner in the image"
-		uint32_t				LMY[MAXLIGHTMAPS];
+		uint32_t				LightMapIDs[MaxLightMaps];
+		uint32_t				LMX[MaxLightMaps]; // "The face's lightmap corner in the image"
+		uint32_t				LMY[MaxLightMaps];
 		uint32_t				LMWidth; // Size of the lightmap section
 		uint32_t				LMHeight;
 		
@@ -178,13 +158,7 @@ public:
 	{
 		uint32_t				Plane;
 		int32_t					TextureIndex;
-	};
-	
-	struct BrushSideR
-	{
-		uint32_t				Plane;
-		int32_t					TextureIndex;
-        int32_t                 DrawSurfNum;
+        int32_t                 DrawSurfIndex;
 	};
 	
 	struct Fog
@@ -196,16 +170,9 @@ public:
 	
 	struct LightVolume
 	{
-		uint8_t					Ambient[3];
-		uint8_t					Directional[3];
-		uint8_t					Direction[2]; // phi, theta.
-	};
-	
-	struct LightVolumeR
-	{
-		uint8_t					Ambient[MAXLIGHTMAPS][3];
-		uint8_t					Directional[MAXLIGHTMAPS][3];
-        uint8_t                 Styles[MAXLIGHTMAPS];
+		uint8_t					Ambient[MaxLightMaps][3];
+		uint8_t					Directional[MaxLightMaps][3];
+        uint8_t                 Styles[MaxLightMaps];
 		uint8_t					Direction[2]; // phi, theta.
 	};
 	
@@ -251,16 +218,12 @@ public:
 	typedef std::vector<Model>				TModelList;
 	typedef std::vector<Brush>				TBrushList;
 	typedef std::vector<BrushSide>			TBrushSideList;
-	typedef std::vector<BrushSideR>			TBrushSideListR;
 	typedef std::vector<Vertex>				TVertexList;
-	typedef std::vector<VertexR>			TVertexListR;
 	typedef std::vector<uint32_t>			TIndexList;
 	typedef std::vector<Fog>				TFogList;
 	typedef std::vector<Face>				TFaceList;
-	typedef std::vector<FaceR>				TFaceListR;
 	typedef std::vector<LightMap>			TLightMapList;
 	typedef std::vector<LightVolume>		TLightVolumeList;
-	typedef std::vector<LightVolumeR>		TLightVolumeListR;
 	typedef std::vector<uint8_t>			TClusterBitList;
 	
 	TMaterialList		Materials;
@@ -272,17 +235,13 @@ public:
 	TModelList			Models;
 	TBrushList			Brushes;
 	TBrushSideList		BrushSides;
-	TBrushSideListR		BrushSidesR;
 	TVertexList			Vertices;
-	TVertexListR		VerticesR;
 	TIndexList			Indices;
 	TFogList			Fogs;
 	TFaceList			Faces;
-	TFaceListR			FacesR;
 	TLightMapList		LightMaps;
 	TLightVolumeList	LightVolumes;
-	TLightVolumeListR	LightVolumesR;
-	
+
 	std::string			EntityString;
 	
 	TClusterBitList		ClusterBits;

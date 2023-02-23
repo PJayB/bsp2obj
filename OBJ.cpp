@@ -136,16 +136,8 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
     }
     obj << "mtllib " << localMtlFN.c_str() << endl << endl;
 
-	if (bsp->Format == BSP::RBSP_Format)
-	{
-		DumpVertexListCommon(bsp->VerticesR, obj);
-		DumpFaceListCommon(bsp->FacesR, *bsp, obj);
-	}
-	else
-	{
-		DumpVertexListCommon(bsp->Vertices, obj);
-		DumpFaceListCommon(bsp->Faces, *bsp, obj);
-	}
+	DumpVertexListCommon(bsp->Vertices, obj);
+	DumpFaceListCommon(bsp->Faces, *bsp, obj);
 
 	obj.close();
 
