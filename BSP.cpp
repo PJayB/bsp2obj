@@ -107,6 +107,8 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 		
 	// Read the header
 	const Header* header = (const Header*) lpBytes;
+
+	Format = header->Format;
 	
 	// Read the lumps
 	const Lump* lumps = (const Lump*) (lpBytes + sizeof(Header));
@@ -172,16 +174,21 @@ void BSP::Unload()
 	Models.clear();
 	Brushes.clear();
 	BrushSides.clear();
+	BrushSidesR.clear();
 	Vertices.clear();
+	VerticesR.clear();
 	Indices.clear();
 	Fogs.clear();
 	Faces.clear();
+	FacesR.clear();
 	LightMaps.clear();
 	LightVolumes.clear();
+	LightVolumesR.clear();
 	EntityString.clear();
 	ClusterBits.clear();
 	
 	NumClusters = 0;
 	ClusterVisDataSize = 0;
+	Format = 0;
 }
 

@@ -288,6 +288,8 @@ public:
 	TClusterBitList		ClusterBits;
 	uint32_t			NumClusters;
 	uint32_t			ClusterVisDataSize;
+
+	uint32_t			Format;
 };
 
 #endif

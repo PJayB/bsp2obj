@@ -30,6 +30,84 @@ string SafeMaterial( string mtl )
 
 const int SF_NODRAW = 0x00200000;
 
+template<typename VertexListT>
+void DumpVertexListCommon(
+	const VertexListT& vertices,
+	ofstream& obj)
+{
+	obj << "# Begin Vertex Positions for " << vertices.size() << " vertices." << endl;
+	for ( auto& v : vertices )
+	{
+		obj << "v " << SafeF( v.Position[0] )
+			<<  " " << SafeF( v.Position[2] )
+			<<  " " << SafeF(-v.Position[1] )
+			<< endl;
+	}
+	obj << "# End Vertex Positions" << endl << endl;
+
+	obj << "# Begin Vertex UVs for " << vertices.size() << " vertices." << endl;
+	for ( auto& v : vertices )
+	{
+		obj << "vt " << SafeF( v.TexCoord[0] )
+			<<   " " << SafeF( v.TexCoord[1] )
+			<<   " " << SafeF( v.TexCoord[2] )
+			<< endl;
+	}
+	obj << "# End Vertex UVs" << endl << endl;
+
+	obj << "# Begin Vertex Normals for " << vertices.size() << " vertices." << endl;
+	for ( auto& v : vertices )
+	{
+		obj << "vn " << SafeF( v.Normal[0] )
+			<<   " " << SafeF( v.Normal[1] )
+			<<   " " << SafeF( v.Normal[2] )
+			<< endl;
+	}
+	obj << "# End Vertex Normals" << endl << endl;
+}
+
+template<typename FaceListT>
+void DumpFaceListCommon(
+	const FaceListT& faces,
+	const BSP& bsp,
+	ofstream& obj)
+{
+
+	obj << "# Begin Face Definitions for " << faces.size() << " faces." << endl;
+    int surfCount = 0;
+	for ( auto& f : faces )
+	{
+        if ( f.NumIndices == 0 )
+            continue;
+
+        // Skip non-solid surfs
+		const BSP::Texture& tex = bsp.Materials[f.TextureID];
+        if ( tex.Flags & SF_NODRAW )
+            continue;
+
+        obj << "usemtl " << SafeMaterial( tex.Name ) << endl;
+        obj << "o surf" << surfCount << endl;
+
+		const uint32_t* indices = &bsp.Indices[f.StartIndex];
+        
+        surfCount++;
+
+		int numFaces = f.NumIndices / 3;
+		for ( int a = 0; a < numFaces; ++a )
+		{
+			size_t i = 1 + f.StartVertexIndex + indices[a * 3 + 0];
+			size_t j = 1 + f.StartVertexIndex + indices[a * 3 + 1];
+			size_t k = 1 + f.StartVertexIndex + indices[a * 3 + 2];
+			obj << "f "	<< i << "/" << i << "/" << i << " "
+						<< k << "/" << k << "/" << k << " "
+						<< j << "/" << j << "/" << j << " "
+						<< endl;
+		}
+
+		obj << endl;
+	}
+	obj << "# End Face Definitions" << endl << endl;
+}
 
 bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
 {
@@ -58,70 +136,16 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
     }
     obj << "mtllib " << localMtlFN.c_str() << endl << endl;
 
-	obj << "# Begin Vertex Positions for " << bsp->Vertices.size() << " vertices." << endl;
-	for ( auto& v : bsp->Vertices )
+	if (bsp->Format == BSP::RBSP_Format)
 	{
-		obj << "v " << SafeF( v.Position[0] )
-			<<  " " << SafeF( v.Position[2] )
-			<<  " " << SafeF(-v.Position[1] )
-			<< endl;
+		DumpVertexListCommon(bsp->VerticesR, obj);
+		DumpFaceListCommon(bsp->FacesR, *bsp, obj);
 	}
-	obj << "# End Vertex Positions" << endl << endl;
-
-	obj << "# Begin Vertex UVs for " << bsp->Vertices.size() << " vertices." << endl;
-	for ( auto& v : bsp->Vertices )
+	else
 	{
-		obj << "vt " << SafeF( v.TexCoord[0] )
-			<<   " " << SafeF( v.TexCoord[1] )
-			<<   " " << SafeF( v.TexCoord[2] )
-			<< endl;
+		DumpVertexListCommon(bsp->Vertices, obj);
+		DumpFaceListCommon(bsp->Faces, *bsp, obj);
 	}
-	obj << "# End Vertex UVs" << endl << endl;
-
-	obj << "# Begin Vertex Normals for " << bsp->Vertices.size() << " vertices." << endl;
-	for ( auto& v : bsp->Vertices )
-	{
-		obj << "vn " << SafeF( v.Normal[0] )
-			<<   " " << SafeF( v.Normal[1] )
-			<<   " " << SafeF( v.Normal[2] )
-			<< endl;
-	}
-	obj << "# End Vertex Normals" << endl << endl;
-
-	obj << "# Begin Face Definitions for " << bsp->Faces.size() << " faces." << endl;
-    int surfCount = 0;
-	for ( auto& f : bsp->Faces )
-	{
-        if ( f.NumIndices == 0 )
-            continue;
-
-        // Skip non-solid surfs
-		const BSP::Texture& tex = bsp->Materials[f.TextureID];
-        if ( tex.Flags & SF_NODRAW )
-            continue;
-
-        obj << "usemtl " << SafeMaterial( tex.Name ) << endl;
-        obj << "o surf" << surfCount << endl;
-
-		const uint32_t* indices = &bsp->Indices[f.StartIndex];
-        
-        surfCount++;
-
-		int numFaces = f.NumIndices / 3;
-		for ( int a = 0; a < numFaces; ++a )
-		{
-			size_t i = 1 + f.StartVertexIndex + indices[a * 3 + 0];
-			size_t j = 1 + f.StartVertexIndex + indices[a * 3 + 1];
-			size_t k = 1 + f.StartVertexIndex + indices[a * 3 + 2];
-			obj << "f "	<< i << "/" << i << "/" << i << " "
-						<< k << "/" << k << "/" << k << " "
-						<< j << "/" << j << "/" << j << " "
-						<< endl;
-		}
-
-		obj << endl;
-	}
-	obj << "# End Face Definitions" << endl << endl;
 
 	obj.close();
 
