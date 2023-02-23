@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
 	FileListing texturesToExport;
 
 	// todo: make arg
-	int tesselationLevel = 3;
+	int tesselationLevel = 16;
 
 	int bspIndex = 0;
 	for (auto& bspFile : bspFiles)
@@ -337,11 +337,18 @@ int main(int argc, char* argv[])
 	cout << "Exporting " << texturesToExport.size() << " textures..." << endl;
 
 	size_t textureIndex = 0;
+	size_t lastStrLen = 0;
 	for (auto& t : texturesToExport)
 	{
 		size_t percent = (textureIndex * 100 / texturesToExport.size());
-		cout << percent << "%: " << t << "\r";
 
+		auto thisStrLen = t.size() + 5;
+		cout << percent << "%: " << t;
+		for (auto i = thisStrLen; i < lastStrLen; ++i)
+			cout << " ";
+		cout << "\r";
+
+		lastStrLen = thisStrLen;
 		ExportTexture(t.c_str(), t.c_str());
 	}
 

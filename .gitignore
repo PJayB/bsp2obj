@@ -14,3 +14,10 @@ subset
 output
 Lib
 build
+*.tga
+*.png
+*.jpg
+*.jpeg
+*_entities.txt
+*.mtl
+*.obj

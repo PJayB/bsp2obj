@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/bsp2obj",
-            "args": [ "/home/pete/Dev/games/RTCW/main", "maps/village2.bsp" ],
+            "args": [ "/home/pete/Dev/games/RTCW/main", "maps/village1.bsp" ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

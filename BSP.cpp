@@ -356,3 +356,115 @@ BSP::Vertex operator * (const BSP::Vertex& v1, const float& d)
     return temp;
 }
 
+void BSP::Tessellate(
+	BSP::Face& f,
+	BSP::TVertexList& vertices,
+	BSP::TIndexList& indices,
+	int numSubdivions)
+{
+	int verticesPerRow = f.BezierDimensions[0];
+	int numPatchesX = f.BezierDimensions[0] / 2;
+	int numPatchesY = f.BezierDimensions[1] / 2;
+
+	auto cpBaseOffset = f.StartVertexIndex;
+
+	f.StartVertexIndex = static_cast<int>(vertices.size());
+	f.StartIndex = static_cast<int>(indices.size());
+
+	int indexOffset = 0;
+	for (int j = 0; j < numPatchesY; ++j) {
+		for (int i = 0; i < numPatchesX; ++i) {
+			int cpPatchOffs1 = cpBaseOffset + j * verticesPerRow * 2 + i * 2;
+			int cpPatchOffs2 = cpPatchOffs1 + verticesPerRow;
+			int cpPatchOffs3 = cpPatchOffs2 + verticesPerRow;
+			
+			const BSP::Vertex controlPoints[9] = {
+				vertices[cpPatchOffs1+0],
+				vertices[cpPatchOffs1+1],
+				vertices[cpPatchOffs1+2],
+				vertices[cpPatchOffs2+0],
+				vertices[cpPatchOffs2+1],
+				vertices[cpPatchOffs2+2],
+				vertices[cpPatchOffs3+0],
+				vertices[cpPatchOffs3+1],
+				vertices[cpPatchOffs3+2],
+			};
+
+			indexOffset += Tessellate(
+				controlPoints,
+				vertices,
+				indices,
+				numSubdivions,
+				indexOffset);
+		}
+	}
+
+	f.NumIndices = static_cast<int>(indices.size()) - f.StartIndex;
+	f.NumVertices = static_cast<int>(vertices.size()) - f.StartVertexIndex;
+	f.FaceType = BSP::kPolygon;
+}
+
+// Shamelessly stolen from git@github.com:leezh/bspviewer.git
+int BSP::Tessellate(
+	const BSP::Vertex* controls,
+	BSP::TVertexList& vertices,
+	BSP::TIndexList& indices,
+	int numSubdivisions,
+	int indexOffset)
+{
+	int vOffset = static_cast<int>(vertices.size());
+	int iOffset = static_cast<int>(indices.size());
+
+    int L1 = numSubdivisions + 1;
+
+    for (int j = 0; j <= numSubdivisions; ++j)
+    {
+        float a = (float)j / numSubdivisions;
+        float b = 1.f - a;
+
+        vertices.push_back(controls[0] * b * b + controls[3] * 2 * b * a + controls[6] * a * a);
+    }
+
+    for (int i = 1; i <= numSubdivisions; ++i)
+    {
+        float a = (float)i / numSubdivisions;
+        float b = 1.f - a;
+
+        BSP::Vertex temp[3];
+
+        for (int j = 0; j < 3; ++j)
+        {
+            int k = 3 * j;
+            temp[j] = controls[k + 0] * b * b + controls[k + 1] * 2 * b * a + controls[k + 2] * a * a;
+        }
+
+        for (int j = 0; j <= numSubdivisions; ++j)
+        {
+            float a = (float)j / numSubdivisions;
+            float b = 1.f - a;
+
+			assert(vertices.size() == vOffset + i * L1 + j);
+            vertices.push_back(temp[0] * b * b + temp[1] * 2 * b * a + temp[2] * a * a);
+        }
+    }
+
+    for (int i = 0; i < numSubdivisions; ++i)
+    {
+        for (int j = 0; j < numSubdivisions; ++j)
+        {
+            int offset = (i * numSubdivisions + j) * 6;
+			assert(indices.size() == iOffset + offset);
+
+            indices.push_back((i    ) * L1 + (j    ) + indexOffset);
+            indices.push_back((i    ) * L1 + (j + 1) + indexOffset);
+            indices.push_back((i + 1) * L1 + (j + 1) + indexOffset);
+
+            indices.push_back((i + 1) * L1 + (j + 1) + indexOffset);
+            indices.push_back((i + 1) * L1 + (j    ) + indexOffset);
+            indices.push_back((i    ) * L1 + (j    ) + indexOffset);
+        }
+    }
+
+	return static_cast<int>(vertices.size()) - vOffset;
+}
+

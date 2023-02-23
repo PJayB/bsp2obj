@@ -66,7 +66,7 @@ public:
 	
 	enum eFaceType
 	{
-		kBrush = 0,
+		kBad = 0,
 		kPolygon = 1,
 		kPatch = 2,
 		kMesh = 3,
@@ -204,24 +204,8 @@ public:
 	{
 		float X, Y, Z, W;
 	};
-	
-	static BSP*	
-	Create(
-		const void* lpByteBlob,
-		size_t cbSize );
-	
-	~BSP();
-	
-	static float				
-	GetLightMapGamma( );
-	
-protected:
 
-	BSP();
-	bool				Load( const uint8_t* lpBytes, size_t cbSize );
-	void				Unload();
-	
-public:
+
 
 	typedef std::vector<Texture>			TMaterialList;
 	typedef std::vector<Plane>				TPlaneList;
@@ -263,6 +247,37 @@ public:
 	uint32_t			ClusterVisDataSize;
 
 	uint32_t			Format;
+	
+	static BSP*	
+	Create(
+		const void* lpByteBlob,
+		size_t cbSize );
+	
+	~BSP();
+	
+	static float				
+	GetLightMapGamma( );
+
+	static void
+	Tessellate(
+		Face& f,
+		TVertexList& vertices,
+		TIndexList& indices,
+		int numSubdivions);
+
+	static int
+	Tessellate(
+		const Vertex* controlPoints,
+		TVertexList& vertices,
+		TIndexList& indices,
+		int numSubdivisions,
+		int indexOffset);
+	
+protected:
+
+	BSP();
+	bool				Load( const uint8_t* lpBytes, size_t cbSize );
+	void				Unload();
 };
 
 // Utilities for interpolating vertices
