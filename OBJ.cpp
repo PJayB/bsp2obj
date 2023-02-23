@@ -46,8 +46,7 @@ void DumpVertexList(
 	for ( auto& v : vertices )
 	{
 		obj << "vt " << SafeF( v.TexCoord[0] )
-			<<   " " << SafeF( v.TexCoord[1] )
-			<<   " " << SafeF( v.TexCoord[2] )
+			<<   " " << SafeF( 1.0f - v.TexCoord[1] )
 			<< endl;
 	}
 	obj << "# End Vertex UVs" << endl << endl;
