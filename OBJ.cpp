@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <cstdint>
+#include <cassert>
 
 using namespace std;
 
@@ -27,12 +28,8 @@ string SafeMaterial( string mtl )
     return move( mtl );
 }
 
-
-const int SF_NODRAW = 0x00200000;
-
-template<typename VertexListT>
-void DumpVertexListCommon(
-	const VertexListT& vertices,
+void DumpVertexList(
+	const std::vector<BSP::Vertex>& vertices,
 	ofstream& obj)
 {
 	obj << "# Begin Vertex Positions for " << vertices.size() << " vertices." << endl;
@@ -66,9 +63,8 @@ void DumpVertexListCommon(
 	obj << "# End Vertex Normals" << endl << endl;
 }
 
-template<typename FaceListT>
-void DumpFaceListCommon(
-	const FaceListT& faces,
+void DumpFaceList(
+	const std::vector<BSP::Face>& faces,
 	const BSP& bsp,
 	ofstream& obj)
 {
@@ -82,15 +78,19 @@ void DumpFaceListCommon(
 
         // Skip non-solid surfs
 		const BSP::Texture& tex = bsp.Materials[f.TextureID];
-        if ( tex.Flags & SF_NODRAW )
+        if ( tex.Flags & BSP::kSurfNoDraw )
             continue;
 
-        obj << "usemtl " << SafeMaterial( tex.Name ) << endl;
-        obj << "o surf" << surfCount << endl;
+		// Skip patches (done later)
+		if (f.FaceType == BSP::kPatch)
+			continue;
+
+        obj << "usemtl " << SafeMaterial( tex.Name.data() ) << endl;
+		obj << "o surf" << surfCount << endl;
 
 		const uint32_t* indices = &bsp.Indices[f.StartIndex];
-        
-        surfCount++;
+		
+		surfCount++;
 
 		int numFaces = f.NumIndices / 3;
 		for ( int a = 0; a < numFaces; ++a )
@@ -109,7 +109,149 @@ void DumpFaceListCommon(
 	obj << "# End Face Definitions" << endl << endl;
 }
 
-bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
+struct Tesselator
+{
+	Tesselator(
+		BSP::TVertexList& vertices,
+		BSP::TIndexList& indices,
+		int bezierLevel)
+	: VertexArray(vertices)
+	, IndexArray(indices)
+	, BezierLevel(bezierLevel)
+	{}
+
+	BSP::TVertexList& VertexArray;
+	BSP::TIndexList& IndexArray;
+	int BezierLevel;
+
+	void Tesselate(int controlOffset, int controlWidth, int vOffset, int iOffset);
+};
+
+// Shamelessly stolen from git@github.com:leezh/bspviewer.git
+void Tesselator::Tesselate(
+	int controlOffset, int controlWidth, int vOffset, int iOffset)
+{
+    BSP::Vertex controls[9];
+    int cIndex = 0;
+    for (int c = 0; c < 3; c++)
+    {
+        int pos = c * controlWidth;
+        controls[cIndex++] = VertexArray[controlOffset + pos];
+        controls[cIndex++] = VertexArray[controlOffset + pos + 1];
+        controls[cIndex++] = VertexArray[controlOffset + pos + 2];
+    }
+
+    int L1 = BezierLevel + 1;
+
+    for (int j = 0; j <= BezierLevel; ++j)
+    {
+        float a = (float)j / BezierLevel;
+        float b = 1.f - a;
+
+		BSP::Vertex v;
+		// todo interpolate
+		// controls[0] * b * b + controls[3] * 2 * b * a + controls[6] * a * a
+        VertexArray.push_back(v);
+    }
+
+    for (int i = 1; i <= BezierLevel; ++i)
+    {
+        float a = (float)i / BezierLevel;
+        float b = 1.f - a;
+
+        BSP::Vertex temp[3];
+
+        for (int j = 0; j < 3; ++j)
+        {
+            int k = 3 * j;
+            // todo: interpolate
+			//temp[j] = controls[k + 0] * b * b + controls[k + 1] * 2 * b * a + controls[k + 2] * a * a;
+        }
+
+        for (int j = 0; j <= BezierLevel; ++j)
+        {
+            float a = (float)j / BezierLevel;
+            float b = 1.f - a;
+
+			BSP::Vertex v;
+            // todo: interpolate temp[0] * b * b + temp[1] * 2 * b * a + temp[2] * a * a;
+			assert(VertexArray.size() == vOffset + i * L1 + j);
+            VertexArray.push_back(v);
+        }
+    }
+
+    for (int i = 0; i <= BezierLevel; ++i)
+    {
+        for (int j = 0; j <= BezierLevel; ++j)
+        {
+            int offset = iOffset + (i * BezierLevel + j) * 6;
+            IndexArray.push_back((i    ) * L1 + (j    ) + vOffset);
+            IndexArray.push_back((i    ) * L1 + (j + 1) + vOffset);
+            IndexArray.push_back((i + 1) * L1 + (j + 1) + vOffset);
+
+            IndexArray.push_back((i + 1) * L1 + (j + 1) + vOffset);
+            IndexArray.push_back((i + 1) * L1 + (j    ) + vOffset);
+            IndexArray.push_back((i    ) * L1 + (j    ) + vOffset);
+        }
+    }
+}
+
+void TesselatePatches(
+	BSP::TFaceList& faces,
+	BSP::TIndexList& indices,
+	BSP::TVertexList& vertices,
+	int level)
+{
+	return; // todo
+
+	int patchVertexCount = (level + 1) * (level + 1);
+	int patchIndexCount = 6 * level * level;
+
+	// Do a quick count of how much space we'll need
+	int extraVertCount = 0;
+	int extraIndexCount = 0;
+	for (auto& f : faces)
+	{
+        if (f.FaceType == BSP::kPatch) {
+			extraVertCount += patchVertexCount;
+			extraIndexCount += patchIndexCount;
+		}   
+	}
+
+	vertices.reserve(vertices.size() + extraVertCount);
+	indices.reserve(indices.size() + extraIndexCount);
+
+	Tesselator t(
+		vertices,
+		indices,
+		level);
+
+	for (auto& f : faces)
+	{
+        if (f.FaceType != BSP::kPatch)
+            continue;
+
+		int sizeX = (f.BezierDimensions[0] - 1) / 2;
+		int sizeY = (f.BezierDimensions[1] - 1) / 2;
+
+		f.StartIndex = static_cast<int>(indices.size());
+
+		for (int x = 0, i = 0; i < sizeX; ++i, x = i * 2) {
+			for (int y = 0, j = 0; j < sizeY; ++j, y = j * 2) {
+				t.Tesselate(
+					f.StartIndex + x + f.BezierDimensions[0] * y,
+					f.BezierDimensions[0],
+					static_cast<int>(vertices.size()),
+					static_cast<int>(indices.size()));
+			}
+		}
+
+		f.NumIndices = static_cast<int>(indices.size()) - f.StartIndex;
+		f.FaceType = BSP::kPolygon;
+	}
+}
+
+bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp, int tesselationLevel )
 {
 	// Open the output file
 	ofstream obj;
@@ -136,8 +278,16 @@ bool DumpObj( const char* filename, const char* mtlFilename, const BSP* bsp )
     }
     obj << "mtllib " << localMtlFN.c_str() << endl << endl;
 
-	DumpVertexListCommon(bsp->Vertices, obj);
-	DumpFaceListCommon(bsp->Faces, *bsp, obj);
+	// Copy the vertex and face data
+	auto vertices = bsp->Vertices;
+	auto indices = bsp->Indices;
+	auto faces = bsp->Faces;
+
+	// Junk all the patch faces and replace them with trimeshes
+	TesselatePatches(faces, indices, vertices, tesselationLevel);
+
+	DumpVertexList(bsp->Vertices, obj);
+	DumpFaceList(bsp->Faces, *bsp, obj);
 
 	obj.close();
 
@@ -165,20 +315,20 @@ bool DumpMtl( const char* filename, const BSP* bsp, const StringMap& textureRema
     for ( auto& tex : bsp->Materials )
     {
         // Skip non-solid surfs
-        if ( tex.Flags & SF_NODRAW )
+        if ( tex.Flags & BSP::kSurfNoDraw )
             continue;
 
-        mtl << "newmtl " << SafeMaterial( tex.Name ) << endl;
+        mtl << "newmtl " << SafeMaterial( tex.Name.data() ) << endl;
         mtl << "Ka 1 1 1" << endl;
         mtl << "Kd 1 1 1" << endl;
         mtl << "Ks 0 0 0" << endl;
         mtl << "Ns 10" << endl;
 
-		StringMap::const_iterator m = textureRemap.find(tex.Name);
+		StringMap::const_iterator m = textureRemap.find(tex.Name.data());
 		if ( m != end(textureRemap) )
 			mtl << "map_Kd " << m->second << endl;
 		else
-			mtl << "map_Kd " << tex.Name << endl;
+			mtl << "map_Kd " << tex.Name.data() << endl;
 
         mtl << endl;
     }

@@ -12,11 +12,11 @@ namespace IBSP
 	
 	struct Vertex
 	{
-		float					Position[3];
-		float					TexCoord[2];
-		float					LMCoord[2];	// Lightmap coordinate.
-		float					Normal[3];
-		uint8_t					Colour[4];
+		BSP::Vec3				Position;
+		BSP::Vec2				TexCoord;
+		BSP::Vec2				LMCoord;	// Lightmap coordinate.
+		BSP::Vec3				Normal;
+		BSP::Color4				Color;
 	};
 	
 	struct Face
@@ -37,23 +37,35 @@ namespace IBSP
 		uint32_t				LMWidth; // Size of the lightmap section
 		uint32_t				LMHeight;
 		
-		float					LMOrigin[3]; // 3D origin of lightmap (???)
-		float					LMVecs[3][3]; // 3D space for s and t unit vectors (???)
+		BSP::Vec3				LMOrigin; // 3D origin of lightmap (???)
+		std::array<BSP::Vec3,3>	LMVecs; // 3D space for s and t unit vectors (???)
 		
-		uint32_t				BezierDimensions[2];
+		BSP::Bounds2D			BezierDimensions;
 	};
 	
 	struct LightVolume
 	{
-		uint8_t					Ambient[3];
-		uint8_t					Directional[3];
-		uint8_t					Direction[2]; // phi, theta.
+		BSP::Color3				Ambient;
+		BSP::Color3				Directional;
+		std::array<uint8_t, 2>	Direction; // phi, theta.
 	};
 }
 
-template<typename T> void copy_array(T& dst, const T& src)
+template<typename T, size_t N> void copy_array(std::array<T, N>& dst, const std::array<T, N>& src)
 {
-    memcpy(dst, src, sizeof(src));
+    memcpy(dst.data(), src.data(), sizeof(T) * src.size());
+}
+
+template<typename Array> void add_vector(Array& r, const Array& a, const Array& b)
+{
+	for (int i = 0; i < r.size(); ++i)
+		r[i] = a[i] + b[i];
+}
+
+template<typename Array> void scale_vector(Array& r, const Array& a, float b)
+{
+	for (int i = 0; i < r.size(); ++i)
+		r[i] = a[i] * b;
 }
 
 static BSP::BrushSide ibsp_to_rbsp(const IBSP::BrushSide& b)
@@ -92,7 +104,7 @@ static BSP::Face ibsp_to_rbsp(const IBSP::Face& b)
     a.StartIndex = b.StartIndex;
     a.NumIndices = b.NumIndices;
     a.LightMapIDs[0] = b.LightMapID;
-    for (int i = 1; i < BSP::MaxLightMaps; ++i)
+    for (int i = 1; i < BSP::kMaxLightMaps; ++i)
         a.LightMapIDs[i] = BSP::kLightMapNone;
     a.LMX[0] = b.LMX;
     a.LMY[0] = b.LMY;
@@ -249,7 +261,7 @@ bool BSP::Load( const uint8_t* lpBytes, size_t cbSize )
 	ReadLump( lpBytes, LeafBrushes,			lumps[kLeafBrushes] );
 	ReadLump( lpBytes, Models,				lumps[kModels] );
 	ReadLump( lpBytes, Brushes,				lumps[kBrushes] );
-	if (header->Format == RBSP_Format) {
+	if (header->Format == kRBSPFormat) {
 		ReadLump(lpBytes, BrushSides,		lumps[kBrushSides]);
 		ReadLump(lpBytes, Vertices,			lumps[kVertices]);
 		ReadLump(lpBytes, Faces,			lumps[kFaces]);
@@ -318,5 +330,29 @@ void BSP::Unload()
 	NumClusters = 0;
 	ClusterVisDataSize = 0;
 	Format = 0;
+}
+
+BSP::Vertex operator + (const BSP::Vertex& v1, const BSP::Vertex& v2)
+{
+    BSP::Vertex temp;
+    add_vector(temp.Position, v1.Position, v2.Position);
+	add_vector(temp.TexCoord, v1.TexCoord, v2.TexCoord);
+    for (int i = 0; i < BSP::kMaxLightMaps; ++i) {
+        add_vector(temp.LMCoord[i], v1.LMCoord[i], v2.LMCoord[i]);
+    }
+    add_vector(temp.Normal, v1.Normal, v2.Normal);
+    return temp;
+}
+
+BSP::Vertex operator * (const BSP::Vertex& v1, const float& d)
+{
+    BSP::Vertex temp;
+    scale_vector(temp.Position, v1.Position, d);
+    scale_vector(temp.TexCoord, v1.TexCoord, d);
+    for (int i = 0; i < BSP::kMaxLightMaps; ++i) {
+        scale_vector(temp.LMCoord[i], v1.LMCoord[i], d);
+    }
+    scale_vector(temp.Normal, v1.Normal, d);
+    return temp;
 }
 

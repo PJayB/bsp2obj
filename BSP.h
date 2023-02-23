@@ -4,14 +4,28 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <array>
 
 class BSP
 {
 public:
-	static constexpr uint32_t MaxLightMaps = 4;
+	static constexpr uint32_t kMaxLightMaps = 4;
 
-	static constexpr uint32_t RBSP_Format = (('P'<<24)+('S'<<16)+('B'<<8)+'R');
-	static constexpr uint32_t IBSP_Format = (('P'<<24)+('S'<<16)+('B'<<8)+'I');
+	static constexpr uint32_t kRBSPFormat = (('P'<<24)+('S'<<16)+('B'<<8)+'R');
+	static constexpr uint32_t kIBSPFormat = (('P'<<24)+('S'<<16)+('B'<<8)+'I');
+
+	using Bounds2D = std::array<int32_t, 2>;
+	using Bounds3D = std::array<int32_t, 3>;
+	using Vec2 = std::array<float, 2>;
+	using Vec3 = std::array<float, 3>;
+	using Color3 = std::array<uint8_t, 3>;
+	using Color4 = std::array<uint8_t, 4>;
+	using LightMapU8s = std::array<uint8_t, kMaxLightMaps>;
+	using LightMapU32s = std::array<uint32_t, kMaxLightMaps>;
+	using LightMapVec2s = std::array<Vec2, kMaxLightMaps>;
+	using LightMapColor3s = std::array<Color3, kMaxLightMaps>;
+	using LightMapColor4s = std::array<Color4, kMaxLightMaps>;
+	using LightMapData = std::array<uint8_t, 128 * 128 * 3>;
 
 	// There are plenty more but this is the most commonly relevant one
 	enum eSurfaceFlags
@@ -52,7 +66,7 @@ public:
 	
 	enum eFaceType
 	{
-		kBad = 0,
+		kBrush = 0,
 		kPolygon = 1,
 		kPatch = 2,
 		kMesh = 3,
@@ -80,11 +94,11 @@ public:
 	
 	struct Vertex
 	{
-		float					Position[3];
-		float					TexCoord[2];
-		float					LMCoord[MaxLightMaps][2];	// Lightmap coordinate.
-		float					Normal[3];
-		uint8_t					Colour[MaxLightMaps][4];
+		std::array<float, 3>	Position;
+		std::array<float, 2>	TexCoord;
+		LightMapVec2s			LMCoord;
+		std::array<float, 3>	Normal;
+		LightMapColor4s		    Color;
 	};
 	
 	struct Face
@@ -99,31 +113,31 @@ public:
 		uint32_t				StartIndex;
 		uint32_t				NumIndices;
 
-		uint8_t					LightMapStyles[MaxLightMaps];
-		uint8_t					VertexStyles[MaxLightMaps];
+		LightMapU8s				LightMapStyles;
+		LightMapU8s				VertexStyles;
 
-		uint32_t				LightMapIDs[MaxLightMaps];
-		uint32_t				LMX[MaxLightMaps]; // "The face's lightmap corner in the image"
-		uint32_t				LMY[MaxLightMaps];
+		LightMapU32s			LightMapIDs;
+		LightMapU32s			LMX; // "The face's lightmap corner in the image"
+		LightMapU32s			LMY;
 		uint32_t				LMWidth; // Size of the lightmap section
 		uint32_t				LMHeight;
 		
-		float					LMOrigin[3]; // 3D origin of lightmap (???)
-		float					LMVecs[3][3]; // 3D space for s and t unit vectors (???)
+		Vec3					LMOrigin; // 3D origin of lightmap (???)
+		std::array<Vec3, 3>		LMVecs; // 3D space for s and t unit vectors (???)
 		
-		uint32_t				BezierDimensions[2];
+		Bounds2D				BezierDimensions;
 	};
 	
 	struct Texture
 	{
-		char					Name[64];
+		std::array<char, 64>	Name;
 		uint32_t				Flags; // Apparently unused?
 		uint32_t				TextureFlags; // See eTextureFlags
 	};
 	
 	struct LightMap
 	{
-		uint8_t					Data[128][128][3];
+		LightMapData			Data;
 	};
 	
 	struct Node
@@ -131,16 +145,16 @@ public:
 		uint32_t				PlaneIndex;
 		uint32_t				FrontIndex; // front node index
 		uint32_t				BackIndex;
-		int32_t					Mins[3];
-		int32_t					Maxs[3];
+		Bounds3D				Mins;
+		Bounds3D				Maxs;
 	};
 	
 	struct Leaf
 	{
 		uint32_t				VisibilityCluster;
 		uint32_t				AreaPortal;
-		int32_t					Mins[3];
-		int32_t					Maxs[3];
+		Bounds3D				Mins;
+		Bounds3D				Maxs;
 		uint32_t				FirstFaceIndex;
 		uint32_t				NumLeafFaces;
 		uint32_t				FirstBrushIndex;
@@ -170,16 +184,16 @@ public:
 	
 	struct LightVolume
 	{
-		uint8_t					Ambient[MaxLightMaps][3];
-		uint8_t					Directional[MaxLightMaps][3];
-        uint8_t                 Styles[MaxLightMaps];
-		uint8_t					Direction[2]; // phi, theta.
+		LightMapColor3s			Ambient;
+		LightMapColor3s			Directional;
+        LightMapU8s             Styles;
+		std::array<uint8_t, 2>	Direction; // phi, theta.
 	};
 	
 	struct Model
 	{
-		float					Mins[3];
-		float					Maxs[3];
+		Vec3					Mins;
+		Vec3					Maxs;
 		uint32_t				FirstFaceIndex;
 		uint32_t				NumFaces;
 		uint32_t				FirstBrushIndex;
@@ -250,5 +264,9 @@ public:
 
 	uint32_t			Format;
 };
+
+// Utilities for interpolating vertices
+BSP::Vertex operator + (const BSP::Vertex& v1, const BSP::Vertex& v2);
+BSP::Vertex operator * (const BSP::Vertex& v1, const float& d);
 
 #endif

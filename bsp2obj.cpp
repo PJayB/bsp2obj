@@ -133,7 +133,7 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 {
 	for (auto& t : bsp->Materials)
 	{
-		string name = t.Name;
+		string name = t.Name.data();
 		
 		// Try and find variants - HACK - should really read these from shader files
 		string targa = name + ".tga";
@@ -148,7 +148,7 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 		else if ( PHYSFS_exists( png.c_str() ) ) 
 			path = png;
 
-		remapping[t.Name] = path;
+		remapping[t.Name.data()] = path;
 	}
 }
 
@@ -182,7 +182,7 @@ bool ExportTexture(const char* source, const char* destination)
 	return true;
 }
 
-bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesToExport )
+bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesToExport, int tesselationLevel )
 {
 	vector<uint8_t> bspData;
 
@@ -239,7 +239,7 @@ bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesTo
 	string entFile = ReplaceExtension( objFile, "_entities.txt" );
 
     int result = 1;
-    if ( DumpObj( objFile, mtlFile.c_str(), bsp ) )
+    if ( DumpObj( objFile, mtlFile.c_str(), bsp, tesselationLevel ) )
     {
 	    if ( DumpMtl( mtlFile.c_str(), bsp, textureRemap ) )
 		{
@@ -320,6 +320,9 @@ int main(int argc, char* argv[])
 
 	FileListing texturesToExport;
 
+	// todo: make arg
+	int tesselationLevel = 3;
+
 	int bspIndex = 0;
 	for (auto& bspFile : bspFiles)
 	{
@@ -327,7 +330,7 @@ int main(int argc, char* argv[])
 
 		cout << "Converting map #" << ++bspIndex << " " << bspFile << " ... ";
 
-		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport ) )
+		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport, tesselationLevel ) )
 			return 1;
 	}
 
