@@ -16,6 +16,8 @@
 
 #include <physfs.h>
 
+#include <missing.tga.h>
+
 using namespace std;
 
 #define VERBOSE( x )	
@@ -147,6 +149,8 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 			path = jpeg;
 		else if ( PHYSFS_exists( png.c_str() ) ) 
 			path = png;
+		else // redirect to missing.tga
+			path = "missing.tga";
 
 		remapping[t.Name.data()] = path;
 	}
@@ -160,15 +164,10 @@ bool ExportTexture(const char* source, const char* destination)
 		return true;
 	}
 
-	// Read the entire input file
-	vector<uint8_t> texData;
-	if (!ReadWholeBinaryFile(source, texData))
-	{
-		return false;
-	}
-
 	// Make sure the output directory is present
-	filesystem::create_directories(outputPath.parent_path());
+	if (outputPath.has_parent_path()) {
+		filesystem::create_directories(outputPath.parent_path());
+	}
 
 	// Output the file
     ofstream out(destination, ios::out | ios::binary);
@@ -176,7 +175,18 @@ bool ExportTexture(const char* source, const char* destination)
 		return false;
 	}
 
-    out.write((const char*)&texData[0], texData.size());
+	// Read the entire input file
+	vector<uint8_t> texData;
+	if (ReadWholeBinaryFile(source, texData))
+	{
+    	out.write((const char*)&texData[0], texData.size());
+	}
+	else
+	{
+		// Failed to read it? Fall back to the "missing" texture
+    	out.write(reinterpret_cast<const char*>(missing_tga), missing_tga_len);
+	}
+
     out.close();
 
 	return true;
