@@ -1,0 +1,3 @@
+[submodule "libid3bsp"]
+	path = libid3bsp
+	url = git@github.com:PJayB/libid3bsp.git
