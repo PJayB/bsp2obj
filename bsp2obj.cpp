@@ -249,6 +249,8 @@ bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesTo
 
     if ( result == 0 )
         cout << "OK!" << endl;
+	else
+		cerr << "Failed!" << endl;
 
 	return true;
 }
@@ -358,6 +360,7 @@ int main(int argc, char* argv[])
 	FileListing texturesToExport;
 
 	int bspIndex = 0;
+	bool ok = true;
 	for (auto& bspFile : bspFiles)
 	{
 		string objFile = BaseName( bspFile ) + ".obj";
@@ -366,7 +369,7 @@ int main(int argc, char* argv[])
 
 		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport,
 			subdivisions, sanityCheck ) ) {
-			return EXIT_FAILURE;
+			ok = false;
 		}
 	}
 
@@ -391,6 +394,6 @@ int main(int argc, char* argv[])
 	cout << "Export complete." << endl;
 
 	PHYSFS_deinit();
-	return EXIT_SUCCESS;
+	return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
