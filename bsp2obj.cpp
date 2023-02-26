@@ -241,6 +241,11 @@ bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesTo
 
 	VERBOSE( cout << "Saving to " << objFile < " ... " );
 
+	// Here just to sanity check the parser -- doesn't do anything
+	// todo: predicate on an command line arg
+	std::vector<id3bsp::Entity> entities;
+	id3bsp::Entity::Parse(bsp->EntityString, filename, entities);
+
 	// Collect textures and find their real identities
 	StringMap textureRemap;
 	RemapTextures( bsp, textureRemap );
