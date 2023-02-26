@@ -25,29 +25,6 @@ using namespace id3bsp;
 
 using FileListing = unordered_set<string>;
 
-string BaseName(string in)
-{
-	// Find the location of the file and extension
-	string tmp = in;
-	string::size_type dotpos = tmp.find_last_of(".");
-	string::size_type dirpos = tmp.find_last_of("/\\");
-	
-	// If there were no path slashes, start from the beginning
-	if (dirpos == string::npos) { dirpos = 0; }
-	// Otherwise start from the character after
-	else { dirpos++; }
-	
-	// If there was no dot, read to the end
-	// Ensure the dot comes before the slash
-	if (dotpos == string::npos || dotpos < dirpos) 
-	{ 
-		dotpos = tmp.size(); 
-	}
-	
-	// Strip the file and extension
-	return tmp.substr(dirpos, dotpos - dirpos);
-}
-
 // Read a whole file. Free the blob afterwards.
 bool ReadWholeBinaryFile(const char* fullpath, vector<uint8_t>& out)
 {
@@ -110,38 +87,16 @@ template<typename TFunc> void EnumerateFilesGlob(
 	EnumerateFilesGlob(path, glob.filename().c_str(), std::forward<TFunc>(func));
 }
 
-// Replace an extension
-string ReplaceExtension(string in, const char* const extension)
-{
-	// Find the last .
-	string::size_type dotPos = in.find_last_of(".");
-	if (dotPos == string::npos)
-	{
-		return in + extension;
-	}
-	
-	// Replace the string
-	return in.substr(0, dotPos) + extension;
-}
-
-string Rebase(const string& oldBase, const string& newBase, string path)
-{
-	if ( strncmp(path.c_str(), oldBase.c_str(), oldBase.size()) == 0 )
-		path = path.substr(oldBase.size());
-	return newBase + path;
-}
-
-
 void RemapTextures( const BSP* bsp, StringMap& remapping )
 {
 	for (auto& t : bsp->Materials)
 	{
-		string name = t.Name.data();
-
 		// Skip nodraw shaders
 		if (t.Flags & BSP::kSurfNoDraw) {
 			continue;
 		}
+
+		string name = t.Name.data();
 		
 		// Try and find variants - HACK - should really read these from shader files
 		string targa = name + ".tga";
@@ -232,8 +187,8 @@ bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesTo
 	}
 
 	// Open the material definition file
-	string mtlFile = ReplaceExtension( objFile, ".mtl" );
-	string entFile = ReplaceExtension( objFile, "_entities.txt" );
+	auto mtlFile = filesystem::path(objFile).replace_extension("mtl");
+	auto entFile = filesystem::path(objFile).replace_extension("entities.txt");
 
     int result = 1;
     if ( DumpObj( objFile, mtlFile.c_str(), bsp, tesselationLevel ) )
@@ -363,7 +318,8 @@ int main(int argc, char* argv[])
 	bool ok = true;
 	for (auto& bspFile : bspFiles)
 	{
-		string objFile = BaseName( bspFile ) + ".obj";
+		auto objFile = filesystem::path(bspFile).filename()
+			.replace_extension("obj");
 
 		cout << "Converting map #" << ++bspIndex << " " << bspFile << " ... ";
 
