@@ -138,6 +138,11 @@ void RemapTextures( const BSP* bsp, StringMap& remapping )
 	for (auto& t : bsp->Materials)
 	{
 		string name = t.Name.data();
+
+		// Skip nodraw shaders
+		if (t.Flags & BSP::kSurfNoDraw) {
+			continue;
+		}
 		
 		// Try and find variants - HACK - should really read these from shader files
 		string targa = name + ".tga";
