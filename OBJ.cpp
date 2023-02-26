@@ -1,5 +1,7 @@
 #include "OBJ.h"
-#include "BSP.h"
+
+#include <id3bsp/BSP.h>
+#include <id3bsp/Entities.h>
 
 #include <fstream>
 #include <string>
@@ -8,6 +10,7 @@
 #include <cassert>
 
 using namespace std;
+using namespace id3bsp;
 
 string SafeF( float f )
 {
@@ -245,6 +248,11 @@ bool DumpMtl( const char* filename, const BSP* bsp, const StringMap& textureRema
 
 bool DumpEnts( const char* filename, const BSP* bsp )
 {
+	// Here just to sanity check the parser -- doesn't do anything
+	std::vector<id3bsp::Entity> entities;
+	bool r = id3bsp::Entity::Parse(bsp->EntityString, filename, entities);
+	assert(r);
+
 	ofstream entF;
 	entF.open( filename );
 	if ( !entF.is_open() )

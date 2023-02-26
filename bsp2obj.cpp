@@ -1,4 +1,5 @@
-#include "BSP.h"
+#include <id3bsp/BSP.h>
+#include <id3bsp/Entities.h>
 #include "OBJ.h"
 
 #include <filesystem>
@@ -19,6 +20,7 @@
 #include <missing.tga.h>
 
 using namespace std;
+using namespace id3bsp;
 
 #define VERBOSE( x )	
 
