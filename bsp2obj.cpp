@@ -16,13 +16,12 @@
 #include <unistd.h>
 
 #include <physfs.h>
+#include <tclap/CmdLine.h>
 
 #include <missing.tga.h>
 
 using namespace std;
 using namespace id3bsp;
-
-#define VERBOSE( x )	
 
 using FileListing = unordered_set<string>;
 
@@ -199,7 +198,7 @@ bool ExportTexture(const char* source, const char* destination)
 	return true;
 }
 
-bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesToExport, int tesselationLevel )
+bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesToExport, int tesselationLevel, bool sanityCheck )
 {
 	vector<uint8_t> bspData;
 
@@ -209,9 +208,6 @@ bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesTo
 		return false;
 	}
 
-	VERBOSE( cout << "OK! " << bspData.size() << " bytes read." << endl );
-	VERBOSE( cout << "Parsing ... " );
-
 	BSP* bsp = BSP::Create( &bspData[0], bspData.size() );
 	if ( !bsp )
 	{
@@ -219,32 +215,11 @@ bool ParseBSP( const char* bspFile, const char* objFile, FileListing& texturesTo
 		return false;
 	}
 
-	VERBOSE( cout << "OK!" << endl );
-	VERBOSE( cout << "Summary:" << endl );
-
-	VERBOSE( cout << " * " << bsp->Materials.size() << " Materials" << endl );
-	VERBOSE( cout << " * " << bsp->Planes.size() << " Planes" << endl );
-	VERBOSE( cout << " * " << bsp->Nodes.size() << " Nodes" << endl );
-	VERBOSE( cout << " * " << bsp->Leaves.size() << " Leaves" << endl );
-	VERBOSE( cout << " * " << bsp->LeafFaces.size() << " Leaf Faces" << endl );
-	VERBOSE( cout << " * " << bsp->LeafBrushes.size() << " Leaf Brushes" << endl );
-	VERBOSE( cout << " * " << bsp->Models.size() << " Models" << endl );
-	VERBOSE( cout << " * " << bsp->Brushes.size() << " Brushes" << endl );
-	VERBOSE( cout << " * " << bsp->BrushSides.size() << " Brush Sides" << endl );
-	VERBOSE( cout << " * " << bsp->Vertices.size() << " Vertices" << endl );
-	VERBOSE( cout << " * " << bsp->Indices.size() << " Indices" << endl );
-	VERBOSE( cout << " * " << bsp->Fogs.size() << " Fogs" << endl );
-	VERBOSE( cout << " * " << bsp->Faces.size() << " Faces" << endl );
-	VERBOSE( cout << " * " << bsp->LightMaps.size() << " Light Maps" << endl );
-	VERBOSE( cout << " * " << bsp->LightVolumes.size() << " Light Volumes" << endl );
-	VERBOSE( cout << " * " << bsp->NumClusters << " Clusters" << endl );
-
-	VERBOSE( cout << "Saving to " << objFile < " ... " );
-
 	// Here just to sanity check the parser -- doesn't do anything
-	// todo: predicate on an command line arg
-	std::vector<id3bsp::Entity> entities;
-	id3bsp::Entity::Parse(bsp->EntityString, filename, entities);
+	if (sanityCheck) {
+		std::vector<id3bsp::Entity> entities;
+		id3bsp::Entity::Parse(bsp->EntityString, bspFile, entities);
+	}
 
 	// Collect textures and find their real identities
 	StringMap textureRemap;
@@ -306,6 +281,46 @@ void MountPakFiles()
 
 int main(int argc, char* argv[])
 {
+	std::string fsRoot;
+	bool sanityCheck = false;
+	int subdivisions = 16;
+	std::vector<std::string> mapGlobs;
+	try {
+		TCLAP::CmdLine cmd("bsp2obj - convert idTech 3-era maps to OBJs", ' ',
+			"0.3");
+
+		auto fsRootArg = TCLAP::ValueArg<std::string>("g", "gamedata",
+			"Game data path (or cwd is used)",
+			false, "", "string");
+
+		auto sanityCheckArg = TCLAP::ValueArg<bool>("c", "check",
+			"Perform sanity checks on the BSP",
+			false, false, "bool");
+
+		auto subdivisionArg = TCLAP::ValueArg<int>("t", "tessellation",
+			"Number of subdivisions for patch tessellation",
+			false, 16, "int");
+
+		auto patterns = TCLAP::UnlabeledMultiArg<std::string>("maps",
+			"Maps to export, e.g. 'maps/q3*.bsp', or empty for all maps",
+			false, "path/glob");
+
+		cmd.add(fsRootArg);
+		cmd.add(sanityCheckArg);
+		cmd.add(subdivisionArg);
+		cmd.add(patterns);
+		cmd.parse(argc, argv);
+
+		fsRoot = fsRootArg.getValue();
+		sanityCheck = sanityCheckArg.getValue();
+		subdivisions = subdivisionArg.getValue();
+		mapGlobs = patterns.getValue();
+	}
+	catch (const TCLAP::ArgException& ex) {
+		cerr << ex.argId() << ": " << ex.error() << endl;
+		return EXIT_FAILURE;
+	}
+
 	if (!PHYSFS_init(argv[0])) {
 		cerr << "Failed to init phsyfs" << endl;
 		return EXIT_FAILURE;
@@ -318,7 +333,7 @@ int main(int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 
-	const char* root = argc < 2 ? cwd : argv[1];
+	const char* root = fsRoot.empty() ? cwd : fsRoot.c_str();
 	if (!PHYSFS_mount(root, nullptr, 0)) {
 		cerr << "Failed to mount " << root << endl;
 		PHYSFS_deinit();
@@ -328,22 +343,19 @@ int main(int argc, char* argv[])
 	MountPakFiles();
 
 	FileListing bspFiles;
-	if (argc > 2) {
-		for (int i = 2; i < argc; ++i) {
-			EnumerateFilesGlob(argv[i], [&] (const char* file) {
-				bspFiles.insert(file);
-			});
-		}
-	} else {
+	if (mapGlobs.empty()) {
 		EnumerateFilesGlob("maps/*.bsp", [&] (const char* file) {
 			bspFiles.insert(file);
 		});
+	} else {
+		for (const auto& glob : mapGlobs) {
+			EnumerateFilesGlob(glob, [&] (const char* file) {
+				bspFiles.insert(file);
+			});
+		}
 	}
 
 	FileListing texturesToExport;
-
-	// todo: make arg
-	int tesselationLevel = 16;
 
 	int bspIndex = 0;
 	for (auto& bspFile : bspFiles)
@@ -352,8 +364,10 @@ int main(int argc, char* argv[])
 
 		cout << "Converting map #" << ++bspIndex << " " << bspFile << " ... ";
 
-		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport, tesselationLevel ) )
-			return 1;
+		if ( !ParseBSP( bspFile.c_str(), objFile.c_str(), texturesToExport,
+			subdivisions, sanityCheck ) ) {
+			return EXIT_FAILURE;
+		}
 	}
 
 	cout << "Exporting " << texturesToExport.size() << " textures..." << endl;
