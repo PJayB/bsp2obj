@@ -113,12 +113,6 @@ void DumpFaceList(
 		int numFaces = f.NumIndices / 3;
 		for ( int a = 0; a < numFaces; ++a )
 		{
-			auto v0 = faceIndices[a * 3 + 0];
-			auto v1 = faceIndices[a * 3 + 0];
-			auto v2 = faceIndices[a * 3 + 0];
-			assert(v0 < f.NumVertices);
-			assert(v1 < f.NumVertices);
-			assert(v2 < f.NumVertices);
 			size_t i = 1 + f.StartVertexIndex + faceIndices[a * 3 + 0];
 			size_t j = 1 + f.StartVertexIndex + faceIndices[a * 3 + 1];
 			size_t k = 1 + f.StartVertexIndex + faceIndices[a * 3 + 2];
